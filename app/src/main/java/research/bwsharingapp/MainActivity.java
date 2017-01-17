@@ -1,9 +1,16 @@
 package research.bwsharingapp;
 
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.wifi.*;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+
+import research.bwsharingapp.p2p.P2PMainActivity;
+import research.bwsharingapp.p2p.P2PReceiver;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -15,9 +22,27 @@ public class MainActivity extends AppCompatActivity {
 //        CountManager mgr = new CountManager();
 //        mgr.runIpTables();
 
+        addOnClickListeners();
+    }
+
+    public void enableHotspot() {
         Context context = this.getApplicationContext();
         WifiManager wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
         WifiAPController wifiAPController  = new WifiAPController();
         wifiAPController.wifiToggle("mHotspot", "12345678", wifiManager, context);
     }
+
+    public void addOnClickListeners() {
+        Button configWifiP2P = (Button) findViewById(R.id.wifi_p2p_btn);
+        final Intent intent = new Intent(this, P2PMainActivity.class);
+        configWifiP2P.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startActivity(intent);
+            }
+        });
+    }
+
+
+
 }
