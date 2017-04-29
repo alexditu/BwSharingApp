@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.Toast;
@@ -35,6 +36,7 @@ public class P2PMainActivity extends AppCompatActivity {
 
     private List<WifiP2pDevice> peers = new ArrayList<WifiP2pDevice>();
     private DevicesAdapter devicesAdapter;
+    private ListView peerListView;
 
     private WifiP2pManager.PeerListListener peerListListener = new WifiP2pManager.PeerListListener() {
         @Override
@@ -60,10 +62,12 @@ public class P2PMainActivity extends AppCompatActivity {
                 return;
             }
 
-            Log.d(TAG, "Discovered devices: ");
+            Log.d(TAG, "Discovered devices: " + refreshedPeers.size());
             for (WifiP2pDevice d : refreshedPeers) {
                 Log.d(TAG, d.toString());
             }
+
+            devicesAdapter.updateDataSource(refreshedPeers);
         }
     };
 
@@ -74,12 +78,10 @@ public class P2PMainActivity extends AppCompatActivity {
         setContentView(R.layout.p2p_activity_main);
 
         init();
-        registerReceivers();
+        addIntentFilters();
         setOnClickListeners();
+        setPeersListView();
 
-        ListView peerListView = (ListView) findViewById(R.id.peer_list_lv);
-        devicesAdapter = new DevicesAdapter(this, new WifiP2pDevice[]{});
-        peerListView.setAdapter(devicesAdapter);
 
     }
 
@@ -89,7 +91,7 @@ public class P2PMainActivity extends AppCompatActivity {
         receiver = new P2PReceiver(mManager, mChannel, this, peerListListener);
     }
 
-    public void registerReceivers() {
+    public void addIntentFilters() {
         //  Indicates a change in the Wi-Fi P2P status.
         intentFilter.addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION);
 
@@ -124,9 +126,7 @@ public class P2PMainActivity extends AppCompatActivity {
         });
     }
 
-    public void connectToPeer() {
-        // Picking the first device found on the network.
-        WifiP2pDevice device = peers.get(0);
+    public void connectToPeer(WifiP2pDevice device) {
 
         WifiP2pConfig config = new WifiP2pConfig();
         config.deviceAddress = device.deviceAddress;
@@ -176,7 +176,30 @@ public class P2PMainActivity extends AppCompatActivity {
         peerConnectBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                connectToPeer();
+                Object device = devicesAdapter.getItem(0);
+
+                if (device != null) {
+                    connectToPeer((WifiP2pDevice) device);
+                } else {
+                    Log.d(TAG, "No devices discovered!");
+                    Toast.makeText(null, "No devices discovered! Retry.", Toast.LENGTH_SHORT).show();
+                }
+
+            }
+        });
+    }
+
+    private void setPeersListView() {
+        peerListView = (ListView) findViewById(R.id.peer_list_lv);
+        devicesAdapter = new DevicesAdapter(this);
+        peerListView.setAdapter(devicesAdapter);
+
+        peerListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                WifiP2pDevice device = (WifiP2pDevice) devicesAdapter.getItem(position);
+                Log.d(TAG, "Clicked on device: " + device.deviceName);
+
             }
         });
     }
