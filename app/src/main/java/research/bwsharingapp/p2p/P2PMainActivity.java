@@ -120,7 +120,7 @@ public class P2PMainActivity extends AppCompatActivity {
                 Log.d(TAG, "peerDiscovery failure: " + Utils.getPeerDiscoveryErrorString(reasonCode));
             }
         });
-        devicesAdapter.clearData();
+        clearDevicesList();
     }
 
     public void connectToPeer(WifiP2pDevice device) {
