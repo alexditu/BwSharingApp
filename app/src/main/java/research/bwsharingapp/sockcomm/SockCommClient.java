@@ -21,7 +21,8 @@ public class SockCommClient {
     private ObjectInputStream input = null;
     private ObjectOutputStream output = null;
 
-    public SockCommClient(int port, InetAddress ipAddr) {
+    public SockCommClient(InetAddress ipAddr, int port) {
+        Log.d(TAG, "SockCommClient: " + ipAddr.getHostAddress() + ":" + port);
         this.port = port;
         this.ipAddr = ipAddr;
         sock = null;
@@ -31,34 +32,33 @@ public class SockCommClient {
         boolean connected = false;
         try {
             sock = new Socket(ipAddr, port);
-            initStreams();
             connected = true;
+            Log.d(TAG, "Connection success!");
         } catch (IOException e) {
+            Log.e(TAG, "Connection failed: " + e);
             e.printStackTrace();
         }
         return connected;
-    }
-
-    private void initStreams() throws IOException {
-        input = new ObjectInputStream(sock.getInputStream());
-        output = new ObjectOutputStream(sock.getOutputStream());
     }
 
     public void sendInitMsg() {
         SockCommMsg<Void> msg = new SockCommMsg<>(0, null);
         try {
             Log.d(TAG, "Sending init msg: " + msg);
+            output = new ObjectOutputStream(sock.getOutputStream());
             output.writeObject(msg);
             output.flush();
 
-            try {
-                SockCommMsg<String> reply = (SockCommMsg<String>)input.readObject();
-                Log.d(TAG, "Recv reply: " + reply);
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
-            }
+            Log.d(TAG, "Msg sent. Reading reply");
+            input = new ObjectInputStream(sock.getInputStream());
+            SockCommMsg<String> reply = (SockCommMsg<String>)input.readObject();
+            Log.d(TAG, "Recv reply: " + reply);
 
         } catch (IOException e) {
+            Log.e(TAG, "sendInitMsg failed: " + e);
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            Log.e(TAG, "sendInitMsg failed: " + e);
             e.printStackTrace();
         }
     }

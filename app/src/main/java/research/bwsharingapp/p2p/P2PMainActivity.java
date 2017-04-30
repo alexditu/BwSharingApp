@@ -27,6 +27,9 @@ import java.util.Collection;
 import java.util.List;
 
 import research.bwsharingapp.R;
+import research.bwsharingapp.sockcomm.CommConstants;
+import research.bwsharingapp.sockcomm.SockCommClient;
+import research.bwsharingapp.sockcomm.SockCommServer;
 
 /**
  * Created by alex on 1/17/17.
@@ -205,26 +208,11 @@ public class P2PMainActivity extends AppCompatActivity {
             }
         });
 
-        Button createGroupBtn = (Button) findViewById(R.id.create_group_btn);
-        createGroupBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Log.d(TAG, "Creating Group...");
-                mManager.createGroup(mChannel, new WifiP2pManager.ActionListener() {
-                    @Override
-                    public void onSuccess() {
-                        // Device is ready to accept incoming connections from peers.
-                        Log.d(TAG, "Group created successfully!");
-                    }
+        Button createServerBtn = (Button) findViewById(R.id.create_server_btn);
+        createServerBtn.setOnClickListener(new ServerAction());
 
-                    @Override
-                    public void onFailure(int reason) {
-                        Log.d(TAG, "P2P group creation failed. Reason: " + reason);
-                    }
-                });
-            }
-        });
-
+        Button clientMsgBtn = (Button) findViewById(R.id.client_msg_btn);
+        clientMsgBtn.setOnClickListener(new ClientAction());
     }
 
     private void setPeersListView() {
@@ -246,6 +234,8 @@ public class P2PMainActivity extends AppCompatActivity {
         mManager.requestConnectionInfo(mChannel, new WifiP2pManager.ConnectionInfoListener() {
             @Override
             public void onConnectionInfoAvailable(WifiP2pInfo info) {
+                Log.d(TAG, "Running on thread: " + Thread.currentThread().getName());
+
                 if (info == null) {
                     Log.d(TAG, "Connection info not available yet");
                     return;
@@ -326,12 +316,28 @@ public class P2PMainActivity extends AppCompatActivity {
                 displayGroupInfoStatus(group);
             }
         });
+
+        mManager.requestConnectionInfo(mChannel, new WifiP2pManager.ConnectionInfoListener() {
+            @Override
+            public void onConnectionInfoAvailable(WifiP2pInfo info) {
+                if (info == null) {
+                    Log.d(TAG, "Connection info not available yet");
+                    return;
+                }
+                setP2pInfo(info);
+            }
+        });
     }
 
     private void setGroupInfo(WifiP2pGroup group) {
         InetAddress inetAddress = Utils.getInetAddress(group.getInterface());
         deviceInfo.setIpAddr(inetAddress);
         deviceInfo.setConnected(true);
+    }
+
+    private void setP2pInfo(WifiP2pInfo info) {
+        deviceInfo.setGroupOwner(info.isGroupOwner);
+        deviceInfo.setGroupOwnerAddress(info.groupOwnerAddress);
     }
 
     private void displayGroupInfoStatus(WifiP2pGroup group) {
@@ -355,6 +361,8 @@ public class P2PMainActivity extends AppCompatActivity {
     private void removeGroupInfo() {
         deviceInfo.setConnected(false);
         deviceInfo.setIpAddr(null);
+        deviceInfo.setGroupOwner(false);
+        deviceInfo.setGroupOwnerAddress(null);
     }
 
     private void clearDisplayGroupInfoStatus() {
@@ -378,6 +386,41 @@ public class P2PMainActivity extends AppCompatActivity {
         if (crtDevice != null) {
             TextView tv = (TextView) findViewById(R.id.crt_dev_info_tv);
             tv.setText("Device info: " + crtDevice.deviceName + "  [" + crtDevice.deviceAddress + "]");
+        }
+    }
+
+    class ServerAction implements View.OnClickListener {
+        @Override
+        public void onClick(View v) {
+            Thread t = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    SockCommServer server =
+                            new SockCommServer(deviceInfo.getIpAddr(), CommConstants.COMM_PORT);
+                    server.start();
+                }
+            });
+            t.start();
+        }
+    }
+
+    class ClientAction implements View.OnClickListener {
+        @Override
+        public void onClick(View v) {
+            Thread t = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    SockCommClient client =
+                            new SockCommClient(deviceInfo.getGroupOwnerAddress(), CommConstants.COMM_PORT);
+                    boolean connected = client.connect();
+
+                    if (connected) {
+                        client.sendInitMsg();
+                    }
+
+                }
+            });
+            t.start();
         }
     }
 }

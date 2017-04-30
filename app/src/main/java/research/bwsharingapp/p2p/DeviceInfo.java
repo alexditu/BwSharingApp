@@ -12,10 +12,13 @@ import java.util.List;
 public class DeviceInfo {
     private WifiP2pDevice device;
     private boolean isConnected;
+    private boolean isGroupOwner;
     private InetAddress ipAddr;
+    private InetAddress groupOwnerAddress;
+
     private List<WifiP2pDevice> clients;
 
-    private boolean isGroupOwner;
+
 
     public DeviceInfo() {
         device = null;
@@ -24,12 +27,13 @@ public class DeviceInfo {
         clients = null;
     }
 
-    public DeviceInfo(WifiP2pDevice device, boolean isConnected, InetAddress ipAddr, List<WifiP2pDevice> clients, boolean isGroupOwner) {
+    public DeviceInfo(WifiP2pDevice device, boolean isConnected, InetAddress ipAddr, InetAddress groupOwnerAddress, boolean isGroupOwner, List<WifiP2pDevice> clients) {
         this.device = device;
         this.isConnected = isConnected;
         this.ipAddr = ipAddr;
-        this.clients = clients;
+        this.groupOwnerAddress = groupOwnerAddress;
         this.isGroupOwner = isGroupOwner;
+        this.clients = clients;
     }
 
     public WifiP2pDevice getDevice() {
@@ -70,5 +74,13 @@ public class DeviceInfo {
 
     public void setGroupOwner(boolean groupOwner) {
         isGroupOwner = groupOwner;
+    }
+
+    public InetAddress getGroupOwnerAddress() {
+        return groupOwnerAddress;
+    }
+
+    public void setGroupOwnerAddress(InetAddress groupOwnerAddress) {
+        this.groupOwnerAddress = groupOwnerAddress;
     }
 }

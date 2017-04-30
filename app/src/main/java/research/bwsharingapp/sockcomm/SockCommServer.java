@@ -23,13 +23,14 @@ public class SockCommServer {
     private InetAddress ipAddr;
     private ServerSocket serverSocket;
 
-    public SockCommServer(int port, InetAddress ipAddr) {
+    public SockCommServer(InetAddress ipAddr, int port) {
+        Log.d(TAG, "SockCommServer: " + ipAddr.getHostAddress() + ":" + port);
         this.port           = port;
         this.ipAddr         = ipAddr;
         this.serverSocket   = null;
     }
 
-    public void serverStart() {
+    public void start() {
         if(createServerSocket() == null) {
             Log.e(TAG, "Socket creation failed for server: " + this.toString());
             return;
@@ -91,12 +92,13 @@ class ServerRequestProcessorThread extends Thread {
         ObjectInputStream input = null;
         ObjectOutputStream output = null;
         try {
+            Log.d(TAG, "Reading message");
             input = new ObjectInputStream(clientSocket.getInputStream());
-            output = new ObjectOutputStream(clientSocket.getOutputStream());
-            output.flush();
-
             SockCommMsg<Void> request = (SockCommMsg<Void>) input.readObject();
+            Log.d(TAG, "Message read: " + request);
 
+            Log.d(TAG, "Sending reply");
+            output = new ObjectOutputStream(clientSocket.getOutputStream());
             if (request.getType() == 0) {
                 SockCommMsg<String> reply = new SockCommMsg<String>(1, "Ok");
                 output.writeObject(reply);
