@@ -21,6 +21,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -45,6 +46,8 @@ public class P2PMainActivity extends AppCompatActivity {
 
     private List<WifiP2pDevice> crtGroup;
     private WifiP2pDevice crtDevice;
+
+    private DeviceInfo deviceInfo;
 
     private WifiP2pManager.PeerListListener peerListListener = new WifiP2pManager.PeerListListener() {
         @Override
@@ -81,6 +84,7 @@ public class P2PMainActivity extends AppCompatActivity {
 
     public void init() {
         crtDevice = null;
+        deviceInfo = new DeviceInfo();
         mManager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
         mChannel = mManager.initialize(this, getMainLooper(), null);
         receiver = new P2PReceiver(mManager, mChannel, this, peerListListener);
@@ -189,7 +193,7 @@ public class P2PMainActivity extends AppCompatActivity {
         connInfoBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                status();
+                printConnectionStatus();
             }
         });
 
@@ -238,7 +242,7 @@ public class P2PMainActivity extends AppCompatActivity {
         });
     }
 
-    private void status() {
+    private void printConnectionStatus() {
         mManager.requestConnectionInfo(mChannel, new WifiP2pManager.ConnectionInfoListener() {
             @Override
             public void onConnectionInfoAvailable(WifiP2pInfo info) {
@@ -295,16 +299,13 @@ public class P2PMainActivity extends AppCompatActivity {
 
     public void setConnectionStatus(int status, WifiP2pDevice device) {
         TextView t = (TextView) findViewById(R.id.conn_status_tv);
-        String baseText = "<bold>Status:</bold> ";
         switch(status) {
-            case 0:
-                // Disconnected
-                t.setText(Html.fromHtml(baseText + "DISCONNECTED"));
+            case 0: // Disconnected
+                t.setText("Status: DISCONNECTED");
                 clearGroupInfoStatus();
                 break;
-            case 1:
-                // Connected
-                t.setText(Html.fromHtml(baseText + "CONNECTED"));
+            case 1: // Connected
+                t.setText("Status: CONNECTED");
                 setGroupInfoStatus();
                 break;
             default:
@@ -321,22 +322,42 @@ public class P2PMainActivity extends AppCompatActivity {
                     Log.d(TAG, "Group info not available yet");
                     return;
                 }
-
-                TextView ipInfo = (TextView) findViewById(R.id.crt_ip_addr_tv);
-                String ipAddr = Utils.getIPAddress(group.getInterface());
-                ipInfo.setText("IP: " + ipAddr);
-
-                TextView groupDevices = (TextView) findViewById(R.id.conn_dev_list_tv);
-                String devices = "Connected devices:\n";
-                for (WifiP2pDevice i : group.getClientList()) {
-                    devices += "\t\t" + i.deviceName + "\n";
-                }
-                groupDevices.setText(devices);
+                setGroupInfo(group);
+                displayGroupInfoStatus(group);
             }
         });
     }
 
+    private void setGroupInfo(WifiP2pGroup group) {
+        InetAddress inetAddress = Utils.getInetAddress(group.getInterface());
+        deviceInfo.setIpAddr(inetAddress);
+        deviceInfo.setConnected(true);
+    }
+
+    private void displayGroupInfoStatus(WifiP2pGroup group) {
+        TextView ipInfo = (TextView) findViewById(R.id.crt_ip_addr_tv);
+        String ipAddr = Utils.getIPAddress(deviceInfo.getIpAddr());
+        ipInfo.setText("IP: " + ipAddr);
+
+        TextView groupDevices = (TextView) findViewById(R.id.conn_dev_list_tv);
+        String devices = "Connected devices:\n";
+        for (WifiP2pDevice i : group.getClientList()) {
+            devices += "\t\t" + i.deviceName + "\n";
+        }
+        groupDevices.setText(devices);
+    }
+
     private void clearGroupInfoStatus() {
+        removeGroupInfo();
+        clearDisplayGroupInfoStatus();
+    }
+
+    private void removeGroupInfo() {
+        deviceInfo.setConnected(false);
+        deviceInfo.setIpAddr(null);
+    }
+
+    private void clearDisplayGroupInfoStatus() {
         TextView groupDevices = (TextView) findViewById(R.id.conn_dev_list_tv);
         groupDevices.setText("");
 
@@ -349,11 +370,11 @@ public class P2PMainActivity extends AppCompatActivity {
     }
 
     public WifiP2pDevice getCrtDevice() {
-        return crtDevice;
+        return deviceInfo.getDevice();
     }
 
     public void setCrtDevice(WifiP2pDevice crtDevice) {
-        this.crtDevice = crtDevice;
+        deviceInfo.setDevice(crtDevice);
         if (crtDevice != null) {
             TextView tv = (TextView) findViewById(R.id.crt_dev_info_tv);
             tv.setText("Device info: " + crtDevice.deviceName + "  [" + crtDevice.deviceAddress + "]");

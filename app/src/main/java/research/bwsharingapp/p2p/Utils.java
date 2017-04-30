@@ -29,7 +29,11 @@ public class Utils {
         return "Unknow error code: " + errorCode;
     }
 
-    public static String getIPAddress(String interfaceName) {
+    public static String getIPAddress(InetAddress inetAddress) {
+        return inetAddress.getHostAddress();
+    }
+
+    public static InetAddress getInetAddress(String interfaceName) {
         NetworkInterface iface = null;
         String addr = "";
 
@@ -39,7 +43,7 @@ public class Utils {
                 addr = i.getHostAddress();
                 boolean isIPv4 = addr.indexOf(':') < 0;
                 if (isIPv4) {
-                    return addr;
+                    return i;
                 }
             }
         } catch (SocketException e) {
@@ -47,7 +51,6 @@ public class Utils {
         }
 
         Log.e(TAG, "No IPv4 address found for interface: " + interfaceName);
-        return addr;
-
+        return null;
     }
 }
