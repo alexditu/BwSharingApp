@@ -59,6 +59,7 @@ public class P2PMainActivity extends AppCompatActivity {
                     Log.d(TAG, d.toString());
                 }
             }
+            clearDevicesList();
             devicesAdapter.updateDataSource(refreshedPeers);
         }
     };
@@ -83,6 +84,7 @@ public class P2PMainActivity extends AppCompatActivity {
         mManager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
         mChannel = mManager.initialize(this, getMainLooper(), null);
         receiver = new P2PReceiver(mManager, mChannel, this, peerListListener);
+
     }
 
     public void addIntentFilters() {
@@ -315,6 +317,15 @@ public class P2PMainActivity extends AppCompatActivity {
         mManager.requestGroupInfo(mChannel, new WifiP2pManager.GroupInfoListener() {
             @Override
             public void onGroupInfoAvailable(WifiP2pGroup group) {
+                if (group == null) {
+                    Log.d(TAG, "Group info not available yet");
+                    return;
+                }
+
+                TextView ipInfo = (TextView) findViewById(R.id.crt_ip_addr_tv);
+                String ipAddr = Utils.getIPAddress(group.getInterface());
+                ipInfo.setText("IP: " + ipAddr);
+
                 TextView groupDevices = (TextView) findViewById(R.id.conn_dev_list_tv);
                 String devices = "Connected devices:\n";
                 for (WifiP2pDevice i : group.getClientList()) {
@@ -328,6 +339,9 @@ public class P2PMainActivity extends AppCompatActivity {
     private void clearGroupInfoStatus() {
         TextView groupDevices = (TextView) findViewById(R.id.conn_dev_list_tv);
         groupDevices.setText("");
+
+        TextView ipInfo = (TextView) findViewById(R.id.crt_ip_addr_tv);
+        ipInfo.setText("");
     }
 
     public void clearDevicesList() {

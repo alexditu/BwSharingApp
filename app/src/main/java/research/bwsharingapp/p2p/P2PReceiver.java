@@ -51,7 +51,6 @@ public class P2PReceiver extends BroadcastReceiver {
             // that.
             if (mManager != null) {
                 mManager.requestPeers(mChannel, peerListListener);
-                activity.clearDevicesList();
             }
 
 
