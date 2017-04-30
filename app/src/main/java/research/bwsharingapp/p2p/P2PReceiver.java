@@ -17,12 +17,12 @@ import research.bwsharingapp.R;
 
 public class P2PReceiver extends BroadcastReceiver {
     private final String TAG = "P2PReceiver";
-    private Activity activity;
+    private P2PMainActivity activity;
     private WifiP2pManager mManager;
     private WifiP2pManager.Channel mChannel;
     private WifiP2pManager.PeerListListener peerListListener;
 
-    public P2PReceiver(WifiP2pManager mManager, WifiP2pManager.Channel mChannel, Activity activity, WifiP2pManager.PeerListListener peerListListener) {
+    public P2PReceiver(WifiP2pManager mManager, WifiP2pManager.Channel mChannel, P2PMainActivity activity, WifiP2pManager.PeerListListener peerListListener) {
         this.mManager = mManager;
         this.mChannel = mChannel;
         this.activity = activity;
@@ -51,6 +51,7 @@ public class P2PReceiver extends BroadcastReceiver {
             // that.
             if (mManager != null) {
                 mManager.requestPeers(mChannel, peerListListener);
+                activity.clearDevicesList();
             }
 
 
@@ -67,11 +68,16 @@ public class P2PReceiver extends BroadcastReceiver {
                     .getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
 
             if (networkInfo.isConnected()) {
+                Log.d(TAG, "WiFi Direct CONNECTED: " + networkInfo);
+                activity.setConnectionStatus(1, null);
 
                 // We are connected with the other device, request connection
                 // info to find group owner IP
 
 //                mManager.requestConnectionInfo(mChannel, connectionListener);
+            } else {
+                Log.d(TAG, "WiFi Direct DISCONNECTED: " + networkInfo);
+                activity.setConnectionStatus(0, null);
             }
 
             if (mManager != null) {
@@ -81,13 +87,24 @@ public class P2PReceiver extends BroadcastReceiver {
 
         } else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
             Log.d(TAG, "WIFI_P2P_THIS_DEVICE_CHANGED_ACTION");
-//            DeviceListFragment fragment = (DeviceListFragment) activity.getFragmentManager()
-//                    .findFragmentById(R.id.frag_list);
-//            fragment.updateThisDevice((WifiP2pDevice) intent.getParcelableExtra(
-//                    WifiP2pManager.EXTRA_WIFI_P2P_DEVICE));
 
+            WifiP2pDevice device =
+                    (WifiP2pDevice)intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE);
+            Log.d(TAG, "Device status: " + device);
+
+            WifiP2pDevice crtDevice = activity.getCrtDevice();
+            if (crtDevice == null) {
+                activity.setCrtDevice(device);
+                Log.d(TAG, "Current device info set. Name: " + device.deviceName);
+            } else {
+                if (crtDevice.equals(device)) {
+                    Log.d(TAG, "Current device has not changed");
+                } else {
+                    Log.d(TAG, "Updating current device");
+                    activity.setCrtDevice(device);
+                }
+            }
 
         }
-
     }
 }

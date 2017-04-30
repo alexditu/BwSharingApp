@@ -2,18 +2,23 @@ package research.bwsharingapp.p2p;
 
 import android.content.Context;
 import android.content.IntentFilter;
+import android.content.res.ColorStateList;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pDeviceList;
+import android.net.wifi.p2p.WifiP2pGroup;
+import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.text.Html;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -34,39 +39,26 @@ public class P2PMainActivity extends AppCompatActivity {
     private WifiP2pManager.Channel mChannel;
     private P2PReceiver receiver;
 
-    private List<WifiP2pDevice> peers = new ArrayList<WifiP2pDevice>();
     private DevicesAdapter devicesAdapter;
     private ListView peerListView;
+
+
+    private List<WifiP2pDevice> crtGroup;
+    private WifiP2pDevice crtDevice;
 
     private WifiP2pManager.PeerListListener peerListListener = new WifiP2pManager.PeerListListener() {
         @Override
         public void onPeersAvailable(WifiP2pDeviceList peerList) {
-
             Collection<WifiP2pDevice> refreshedPeers = peerList.getDeviceList();
-            if (!refreshedPeers.equals(peers)) {
-                peers.clear();
-                peers.addAll(refreshedPeers);
 
-                // If an AdapterView is backed by this data, notify it
-                // of the change.  For instance, if you have a ListView of
-                // available peers, trigger an update.
-//                ((WiFiPeerListAdapter) getListAdapter()).notifyDataSetChanged();
-                Log.d(TAG, "Peer list updated");
-                // Perform any other updates needed based on the new list of
-                // peers connected to the Wi-Fi P2P network.
-                //devicesAdapter.updateDataSource(peers.toArray(new WifiP2pDevice[]{}));
-            }
-
-            if (peers.size() == 0) {
+            if (refreshedPeers.size() == 0) {
                 Log.d(TAG, "No devices found");
-                return;
+            } else {
+                Log.d(TAG, "Discovered devices: " + refreshedPeers.size());
+                for (WifiP2pDevice d : refreshedPeers) {
+                    Log.d(TAG, d.toString());
+                }
             }
-
-            Log.d(TAG, "Discovered devices: " + refreshedPeers.size());
-            for (WifiP2pDevice d : refreshedPeers) {
-                Log.d(TAG, d.toString());
-            }
-
             devicesAdapter.updateDataSource(refreshedPeers);
         }
     };
@@ -81,11 +73,13 @@ public class P2PMainActivity extends AppCompatActivity {
         addIntentFilters();
         setOnClickListeners();
         setPeersListView();
+        setConnectionStatus(0, null);
 
 
     }
 
     public void init() {
+        crtDevice = null;
         mManager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
         mChannel = mManager.initialize(this, getMainLooper(), null);
         receiver = new P2PReceiver(mManager, mChannel, this, peerListListener);
@@ -121,9 +115,10 @@ public class P2PMainActivity extends AppCompatActivity {
             public void onFailure(int reasonCode) {
                 // Code for when the discovery initiation fails goes here.
                 // Alert the user that something went wrong.
-                Log.d(TAG, "peerDiscovery failure: " + reasonCode);
+                Log.d(TAG, "peerDiscovery failure: " + Utils.getPeerDiscoveryErrorString(reasonCode));
             }
         });
+        devicesAdapter.clearData();
     }
 
     public void connectToPeer(WifiP2pDevice device) {
@@ -187,6 +182,43 @@ public class P2PMainActivity extends AppCompatActivity {
 
             }
         });
+
+        Button connInfoBtn = (Button) findViewById(R.id.conn_info_btn);
+        connInfoBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                status();
+            }
+        });
+
+        Button disconnectBtn = (Button) findViewById(R.id.disconnect_btn);
+        disconnectBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                disconnect();
+            }
+        });
+
+        Button createGroupBtn = (Button) findViewById(R.id.create_group_btn);
+        createGroupBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG, "Creating Group...");
+                mManager.createGroup(mChannel, new WifiP2pManager.ActionListener() {
+                    @Override
+                    public void onSuccess() {
+                        // Device is ready to accept incoming connections from peers.
+                        Log.d(TAG, "Group created successfully!");
+                    }
+
+                    @Override
+                    public void onFailure(int reason) {
+                        Log.d(TAG, "P2P group creation failed. Reason: " + reason);
+                    }
+                });
+            }
+        });
+
     }
 
     private void setPeersListView() {
@@ -198,9 +230,119 @@ public class P2PMainActivity extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 WifiP2pDevice device = (WifiP2pDevice) devicesAdapter.getItem(position);
-                Log.d(TAG, "Clicked on device: " + device.deviceName);
-
+                Log.d(TAG, "Connecting to device: " + device.deviceName);
+                connectToPeer(device);
             }
         });
+    }
+
+    private void status() {
+        mManager.requestConnectionInfo(mChannel, new WifiP2pManager.ConnectionInfoListener() {
+            @Override
+            public void onConnectionInfoAvailable(WifiP2pInfo info) {
+                if (info == null) {
+                    Log.d(TAG, "Connection info not available yet");
+                    return;
+                }
+
+                Log.d(TAG, "Connection Info:");
+                Log.d(TAG, "groupFormed: " + info.groupFormed);
+                Log.d(TAG, "isGroupOwner: " + info.isGroupOwner);
+                Log.d(TAG, "groupOwnerAddress: " + info.groupOwnerAddress);
+                Log.d(TAG, "");
+            }
+        });
+
+        mManager.requestGroupInfo(mChannel, new WifiP2pManager.GroupInfoListener() {
+            @Override
+            public void onGroupInfoAvailable(WifiP2pGroup group) {
+                if (group == null) {
+                    Log.d(TAG, "Group info not available yet");
+                    return;
+                }
+
+                Log.d(TAG, "Group info: " + group);
+                String devices = "";
+                Collection<WifiP2pDevice> clientList = group.getClientList();
+                for (WifiP2pDevice i : clientList) {
+                    devices += i.deviceName + ", ";
+                }
+                Log.d(TAG, "Devices in group ( " + clientList.size() + " ): " + devices);
+                Log.d(TAG, "Interface: " + group.getInterface());
+                Log.d(TAG, "NetworkName: " + group.getNetworkName());
+                Log.d(TAG, "Group owner: " + group.getOwner().deviceName);
+                Log.d(TAG, "Passphrase: " + group.getPassphrase());
+                Log.d(TAG, "");
+            }
+        });
+    }
+
+    private void disconnect() {
+        mManager.removeGroup(mChannel, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+                Log.d(TAG, "Group removed successfully");
+            }
+
+            @Override
+            public void onFailure(int reason) {
+                Log.d(TAG, "Group remove failed with reason: " + reason);
+            }
+        });
+    }
+
+    public void setConnectionStatus(int status, WifiP2pDevice device) {
+        TextView t = (TextView) findViewById(R.id.conn_status_tv);
+        String baseText = "<bold>Status:</bold> ";
+        switch(status) {
+            case 0:
+                // Disconnected
+                t.setText(Html.fromHtml(baseText + "DISCONNECTED"));
+                clearGroupInfoStatus();
+                break;
+            case 1:
+                // Connected
+                t.setText(Html.fromHtml(baseText + "CONNECTED"));
+                setGroupInfoStatus();
+                break;
+            default:
+                Log.d(TAG, "Unknown state!");
+                break;
+        }
+    }
+
+    private void setGroupInfoStatus() {
+        mManager.requestGroupInfo(mChannel, new WifiP2pManager.GroupInfoListener() {
+            @Override
+            public void onGroupInfoAvailable(WifiP2pGroup group) {
+                TextView groupDevices = (TextView) findViewById(R.id.conn_dev_list_tv);
+                String devices = "Connected devices:\n";
+                for (WifiP2pDevice i : group.getClientList()) {
+                    devices += "\t\t" + i.deviceName + "\n";
+                }
+                groupDevices.setText(devices);
+            }
+        });
+    }
+
+    private void clearGroupInfoStatus() {
+        TextView groupDevices = (TextView) findViewById(R.id.conn_dev_list_tv);
+        groupDevices.setText("");
+    }
+
+    public void clearDevicesList() {
+        devicesAdapter.clearData();
+    }
+
+    public WifiP2pDevice getCrtDevice() {
+        return crtDevice;
+    }
+
+    public void setCrtDevice(WifiP2pDevice crtDevice) {
+        this.crtDevice = crtDevice;
+        if (crtDevice != null) {
+            TextView tv = (TextView) findViewById(R.id.crt_dev_info_tv);
+            tv.setText("Device info: " + crtDevice.deviceName + "  [" + crtDevice.deviceAddress + "]");
+        }
     }
 }

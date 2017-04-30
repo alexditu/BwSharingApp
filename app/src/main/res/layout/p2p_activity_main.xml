@@ -4,7 +4,7 @@
     android:layout_height="match_parent">
 
     <Button
-        android:text="Discover Peers"
+        android:text="Discover Nearby Peers"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/peer_discovery_btn" />
@@ -15,8 +15,51 @@
         android:layout_height="wrap_content"
         android:id="@+id/peer_connect_btn" />
 
+    <Button
+        android:text="Disconnect"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/disconnect_btn" />
+
+    <Button
+        android:text="Create Group"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/create_group_btn" />
+
+    <Button
+        android:text="Print Connection info"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/conn_info_btn" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:id="@+id/crt_dev_info_tv"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Status: DISCONNECTED"
+        android:id="@+id/conn_status_tv"/>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:id="@+id/conn_dev_list_tv"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:text="Nearby devices:"
+        android:id="@+id/perr_list_info_tv"/>
+
     <ListView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_marginTop="5dp"
         android:id="@+id/peer_list_lv"/>
 </LinearLayout>

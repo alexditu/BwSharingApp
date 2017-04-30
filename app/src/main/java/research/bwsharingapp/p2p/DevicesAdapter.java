@@ -39,6 +39,11 @@ public class DevicesAdapter extends BaseAdapter {
         notifyDataSetChanged();
     }
 
+    public void clearData() {
+        mDataSource.clear();
+        notifyDataSetChanged();
+    }
+
     @Override
     public int getCount() {
         return mDataSource.size();
