@@ -389,15 +389,40 @@ public class P2PMainActivity extends AppCompatActivity {
         }
     }
 
+    private static boolean serverStared = false;
+    private static boolean clientStarted = false;
+    private SockCommServer server;
+    private SockCommClient client;
     class ServerAction implements View.OnClickListener {
+
+
         @Override
         public void onClick(View v) {
             Thread t = new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    SockCommServer server =
-                            new SockCommServer(deviceInfo.getIpAddr(), CommConstants.COMM_PORT);
-                    server.start();
+                    boolean ret;
+
+                    if (!serverStared) {
+                        server = new SockCommServer(deviceInfo.getIpAddr(), CommConstants.COMM_PORT);
+                        Log.d(TAG, "Starting SockCommServer: " + server);
+                        ret = server.start();
+                        if (ret == true) {
+                            Log.d(TAG, "Starting SockCommServer succeeded!");
+                            serverStared = true;
+                        } else {
+                            Log.d(TAG, "Starting SockCommServer failed!");
+                        }
+                    } else {
+                        Log.d(TAG, "Stopping SockCommServer: " + server);
+                        ret = server.stop();
+                        if (ret == true) {
+                            Log.d(TAG, "Stopping SockCommServer succeeded!");
+                            serverStared = false;
+                        } else {
+                            Log.d(TAG, "Stopping SockCommServer failed!");
+                        }
+                    }
                 }
             });
             t.start();
@@ -410,14 +435,19 @@ public class P2PMainActivity extends AppCompatActivity {
             Thread t = new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    SockCommClient client =
-                            new SockCommClient(deviceInfo.getGroupOwnerAddress(), CommConstants.COMM_PORT);
-                    boolean connected = client.connect();
 
-                    if (connected) {
-                        client.sendInitMsg();
+                    if (!clientStarted) {
+                        client = new SockCommClient(deviceInfo.getGroupOwnerAddress(), CommConstants.COMM_PORT);
+                        boolean connected = client.connect();
+
+                        if (connected) {
+                            client.sendInitMsg();
+                        }
+                        clientStarted = true;
+                    } else {
+                        client.disconnect();
+                        clientStarted = false;
                     }
-
                 }
             });
             t.start();

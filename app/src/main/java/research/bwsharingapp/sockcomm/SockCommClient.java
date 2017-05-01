@@ -64,6 +64,10 @@ public class SockCommClient {
     }
 
     public void disconnect() {
-
+        try {
+            sock.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

@@ -10,6 +10,9 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by alex on 4/30/17.
@@ -23,20 +26,65 @@ public class SockCommServer {
     private InetAddress ipAddr;
     private ServerSocket serverSocket;
 
+    private ServerMainThread serverMainThread;
+    private List<ServerWorkerThread> workerThreadPool;
+
     public SockCommServer(InetAddress ipAddr, int port) {
-        Log.d(TAG, "SockCommServer: " + ipAddr.getHostAddress() + ":" + port);
         this.port           = port;
         this.ipAddr         = ipAddr;
         this.serverSocket   = null;
+        this.serverMainThread = null;
+
+        workerThreadPool = new ArrayList<>(MAX_CLIENT_CONN);
     }
 
-    public void start() {
+    public synchronized void addWorker(ServerWorkerThread worker) {
+        workerThreadPool.add(worker);
+    }
+
+    public synchronized void removeWorker(ServerWorkerThread worker) {
+        workerThreadPool.remove(worker);
+    }
+
+    public void waitWorkers() {
+        int size = -1;
+
+        while (size != 0) {
+            synchronized (this) {
+                size = workerThreadPool.size();
+            }
+            Log.d(TAG, "Waiting for " + size + " workers to finnish");
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                Log.d(TAG, "Exception while waiting workers to finnsih: " + e);
+                return;
+            }
+        }
+    }
+
+
+    public boolean start() {
         if(createServerSocket() == null) {
             Log.e(TAG, "Socket creation failed for server: " + this.toString());
-            return;
+            return false;
         }
 
-        run();
+        serverMainThread = new ServerMainThread();
+        serverMainThread.start();
+
+        return true;
+    }
+
+    public boolean stop() {
+        try {
+            serverSocket.close();
+        } catch (IOException e) {
+            Log.e(TAG, "Exception while closing serverSocket: " + e);
+            e.printStackTrace();
+            return false;
+        }
+        return true;
     }
 
     private ServerSocket createServerSocket() {
@@ -49,41 +97,17 @@ public class SockCommServer {
         return serverSocket;
     }
 
-    private void run() {
-        while(true) {
-            Log.d(TAG, "Waiting for clients...");
-            Socket clientSock = null;
-            try {
-                clientSock = serverSocket.accept();
-                Log.d(TAG, "Client connected: " + clientSock.getInetAddress().getHostAddress());
-
-                ServerRequestProcessorThread th = new ServerRequestProcessorThread(clientSock);
-                th.start();
-
-                try {
-                    th.join();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-
-                break;
-            } catch (IOException e) {
-                Log.e(TAG, "Exception while accepting socket: " + e);
-                e.printStackTrace();
-            }
-        }
-    }
 
     @Override
     public String toString() {
         return ipAddr.getHostAddress() + ":" + port;
     }
 
-class ServerRequestProcessorThread extends Thread {
-    private final String TAG = "ServerTh-" + Thread.currentThread().getId();
+class ServerWorkerThread extends Thread {
+    private final String TAG = "SockCommServer_worker-" + Thread.currentThread().getId();
     private Socket clientSocket;
 
-    public ServerRequestProcessorThread(Socket clientSocket) {
+    public ServerWorkerThread(Socket clientSocket) {
         this.clientSocket = clientSocket;
     }
 
@@ -115,8 +139,39 @@ class ServerRequestProcessorThread extends Thread {
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
+
+        removeWorker(this);
     }
 }
+
+    class ServerMainThread extends Thread {
+        private final String TAG = "SockCommServer_main";
+
+        public ServerMainThread() {
+
+        }
+
+        @Override
+        public void run() {
+            try {
+                while(true) {
+                    Log.d(TAG, "Waiting for clients...");
+                    Socket clientSock = null;
+
+                    clientSock = serverSocket.accept();
+                    Log.d(TAG, "Client connected: " + clientSock.getInetAddress().getHostAddress());
+
+                    ServerWorkerThread th = new ServerWorkerThread(clientSock);
+                    th.start();
+                    addWorker(th);
+                }
+            } catch (SocketException e) {
+                Log.d(TAG, "Server stopped: signaled to stop: " + e);
+            } catch (IOException e) {
+                Log.e(TAG, "Server stopped: Exception while accepting socket: " + e);
+            }
+        }
+    }
 
 
 }
