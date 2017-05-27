@@ -7,7 +7,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 
-import research.bwsharingapp.KibbutzInfo;
+import research.bwsharingapp.bg.pojo.ServiceInfo;
 
 /**
  * Created by alex on 5/27/17.
@@ -17,10 +17,10 @@ public class RouterAccountingService extends AccountingService {
     private final static String TAG = "RouterAccountingService";
 
     public static final String KB_INFO_TAG  = "kibbutz_info";
-    private KibbutzInfo kb;
+    private ServiceInfo kb;
 
     @Override
-    protected void startAccounting(KibbutzInfo kb) {
+    protected void startAccounting(ServiceInfo kb) {
         this.kb = kb;
         Log.d(TAG, "startAccounting: " + kb);
         try {

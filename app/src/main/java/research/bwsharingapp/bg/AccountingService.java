@@ -6,7 +6,7 @@ import android.os.IBinder;
 import android.util.Log;
 import android.widget.Toast;
 
-import research.bwsharingapp.KibbutzInfo;
+import research.bwsharingapp.bg.pojo.ServiceInfo;
 
 import static research.bwsharingapp.bg.ClientAccountingService.KB_INFO_TAG;
 
@@ -28,7 +28,7 @@ public class AccountingService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.i(TAG, "Received start id " + startId + ": " + intent);
 
-        final KibbutzInfo kb = (KibbutzInfo) intent.getSerializableExtra(KB_INFO_TAG);
+        final ServiceInfo kb = (ServiceInfo) intent.getSerializableExtra(KB_INFO_TAG);
         Thread t = new Thread() {
             @Override
             public void run() {
@@ -50,7 +50,7 @@ public class AccountingService extends Service {
         return null;
     }
 
-    protected void startAccounting(KibbutzInfo kb) {
+    protected void startAccounting(ServiceInfo kb) {
         Log.d(TAG, "startAccounting");
     }
 

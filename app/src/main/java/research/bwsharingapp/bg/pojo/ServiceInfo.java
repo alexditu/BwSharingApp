@@ -1,4 +1,4 @@
-package research.bwsharingapp;
+package research.bwsharingapp.bg.pojo;
 
 import java.io.Serializable;
 
@@ -6,18 +6,18 @@ import java.io.Serializable;
  * Created by alex on 5/27/17.
  */
 
-public class KibbutzInfo implements Serializable {
+public class ServiceInfo implements Serializable {
     private String routerIp;
     private String clientIp;
     private String routerPort;
 
-    public KibbutzInfo(String routerIp, String clientIp, String routerPort) {
+    public ServiceInfo(String routerIp, String clientIp, String routerPort) {
         this.routerIp = routerIp;
         this.clientIp = clientIp;
         this.routerPort = routerPort;
     }
 
-    public KibbutzInfo() {
+    public ServiceInfo() {
 
     }
 
