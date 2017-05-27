@@ -1,0 +1,172 @@
+package research.bwsharingapp.iptables;
+
+import android.util.Log;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+
+/**
+ * Created by alex on 5/20/17.
+ */
+
+public class IPTablesManager {
+    public static final String TAG = "IPTablesManager";
+    public static final String IPTABLES_BIN = "/system/bin/iptables";
+
+    public static final String R_SET_FW_INBOUND_CMD     = "-t filter -I FORWARD 1 -d %s/32 -j LOG --log-prefix %s__INBOUND";
+    public static final String R_SET_FW_OUTBOUND_CMD    = "-t filter -I FORWARD 1 -s %s/32 -j LOG --log-prefix %s_OUTBOUND";
+    public static final String C_SET_INBOUND_CMD        = "-t filter -I INPUT 1 -j LOG --log-prefix %s__INBOUND";
+    public static final String C_SET_OUTBOUND_CMD       = "-t filter -I OUTPUT 1 -j LOG --log-prefix %s_OUTBOUND";
+
+    public static final String R_DEL_FW_INBOUND_CMD     = "-t filter -D FORWARD -d %s/32 -j LOG --log-prefix %s__INBOUND";
+    public static final String R_DEL_FW_OUTBOUND_CMD    = "-t filter -D FORWARD -s %s/32 -j LOG --log-prefix %s_OUTBOUND";
+    public static final String C_DEL_INBOUND_CMD        = "-t filter -D INPUT -j LOG --log-prefix %s__INBOUND";
+    public static final String C_DEL_OUTBOUND_CMD       = "-t filter -D OUTPUT -j LOG --log-prefix %s_OUTBOUND";
+
+    public static final String R_GET_FW_STATS           = "-t filter -L FORWARD -nvx --line-numbers";
+    public static final String C_GET_INBOUND_STATS      = "-t filter -L INPUT --line-numbers -nvx";
+    public static final String C_GET_OUTBOUND_STATS     = "-t filter -L OUTPUT --line-numbers -nvx";
+
+    public static final String R_ZERO_FORWARD_STATS     = "-t filter -Z FORWARD";
+    public static final String C_ZERO_INBOUND_STATS     = "-t filter -Z INPUT";
+    public static final String C_ZERO_OUTBOUND_STATS    = "-t filter -Z OUTPUT";
+
+    public IPTablesManager() {
+    }
+
+    public static TrafficInfo getInputStats(String id) throws IOException, ExecFailedException, IPTablesParserException {
+        String cmd = String.format(C_GET_INBOUND_STATS, id);
+        ArrayList<String> output = execCmdAndReadOutput(cmd);
+
+        TrafficInfo info = IPTablesParser.parseInbound(output, id);
+        return info;
+    }
+
+    public static TrafficInfo getOutputStats(String id) throws IOException, ExecFailedException, IPTablesParserException {
+        String cmd = String.format(C_GET_OUTBOUND_STATS, id);
+        ArrayList<String> output = execCmdAndReadOutput(cmd);
+
+        TrafficInfo info = IPTablesParser.parseOutbound(output, id);
+        return info;
+    }
+
+    public static TrafficInfo[] getFwStats(String id) throws IOException, ExecFailedException, IPTablesParserException {
+        String cmd = String.format(R_GET_FW_STATS, id);
+        ArrayList<String> output = execCmdAndReadOutput(cmd);
+
+        TrafficInfo inbound     = IPTablesParser.parseFwInbound(output, id);
+        TrafficInfo outbound    = IPTablesParser.parseFwOutbound(output, id);
+        TrafficInfo result[]    = {inbound, outbound};
+        return result;
+    }
+
+    public static void setClientIptablesRules(String id) throws ExecFailedException {
+        execCmd(String.format(C_DEL_INBOUND_CMD, id));
+        execCmd(String.format(C_DEL_OUTBOUND_CMD, id));
+
+        execCmd(String.format(C_SET_INBOUND_CMD, id));
+        execCmd(String.format(C_SET_OUTBOUND_CMD, id));
+    }
+
+    public static void setRouterIptablesRules(String clientIp, String id) throws ExecFailedException {
+        execCmd(String.format(R_DEL_FW_INBOUND_CMD, clientIp, id));
+        execCmd(String.format(R_DEL_FW_OUTBOUND_CMD, clientIp, id));
+
+        execCmd(String.format(R_SET_FW_INBOUND_CMD, clientIp, id));
+        execCmd(String.format(R_SET_FW_OUTBOUND_CMD, clientIp, id));
+    }
+
+    public static void clearForwardStats() throws ExecFailedException {
+        execCmd(R_ZERO_FORWARD_STATS);
+    }
+
+    public static void clearInputStats() throws ExecFailedException {
+        execCmd(C_ZERO_INBOUND_STATS);
+    }
+
+    public static void clearOutputStats() throws ExecFailedException {
+        execCmd(C_ZERO_OUTBOUND_STATS);
+    }
+
+
+
+
+
+    private static String getStringCmd(String cmd[]) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < cmd.length; i++) {
+            sb.append(cmd[i]);
+            if (i != cmd.length - 1) {
+                sb.append(", ");
+            }
+        }
+        return sb.toString();
+    }
+
+    private static Process exec(final String cmd[]) throws ExecFailedException {
+        Process p = null;
+        int ret = -1001;
+
+        Runtime runtime = Runtime.getRuntime();
+        try {
+            p = runtime.exec(cmd);
+            ret = p.waitFor();
+            Log.d(TAG, "p.waitFor() ret: " + ret);
+        } catch (IOException e) {
+            Log.e(TAG, "Exception while running exec with cmd: '" + getStringCmd(cmd) + "' : " + e);
+            ret = -100;
+        } catch (InterruptedException e) {
+            Log.e(TAG, "Exception while waiting for process to finnish: " + e);
+            ret = -101;
+        }
+
+        if (ret != 0) {
+            Log.e(TAG, "Failed to exec cmd: '%s" + getStringCmd(cmd) + "', exit code: " + ret);
+            throw new ExecFailedException(ret);
+        } else {
+            return p;
+        }
+    }
+
+    private static ArrayList<String> readProcessOutput(Process proc) throws IOException {
+        ArrayList<String> output = new ArrayList<>();
+
+        InputStream in = proc.getInputStream();
+        BufferedReader br = new BufferedReader(new InputStreamReader(in));
+        String line = br.readLine();
+        while (line != null) {
+            output.add(line);
+            line = br.readLine();
+        }
+        return output;
+    }
+
+    private static void printOutput(ArrayList<String> output) {
+        for (String i : output) {
+            Log.d(TAG, i);
+        }
+    }
+
+    private static void execCmd(String cmd) throws ExecFailedException {
+        String cmdArray[] = new String[] {"su", "-c", IPTABLES_BIN, cmd};
+        Process proc = exec(cmdArray);
+    }
+
+    private static ArrayList<String> execCmdAndReadOutput(String cmd) throws IOException, ExecFailedException {
+        String cmdArray[] = new String[] {"su", "-c", IPTABLES_BIN, cmd};
+        Process proc = exec(cmdArray);
+        ArrayList<String> output = readProcessOutput(proc);
+
+        if (output == null) {
+            // TODO: print error output stream for more info
+            Log.e(TAG, "getInputStats: failed to exec cmd: '" + getStringCmd(cmdArray) + "' output stream was empty!");
+            throw new ExecFailedException(-105);
+        }
+        return output;
+    }
+
+
+}
