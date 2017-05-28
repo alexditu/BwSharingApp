@@ -42,7 +42,7 @@ public class SockCommClient {
     }
 
     public void sendInitMsg() {
-        SockCommMsg<Void> msg = new SockCommMsg<>(0, null);
+        SockCommMsg<Void> msg = new SockCommMsg<>(MsgType.HELLO, null);
         try {
             Log.d(TAG, "Sending init msg: " + msg);
             output = new ObjectOutputStream(sock.getOutputStream());
@@ -61,6 +61,10 @@ public class SockCommClient {
             Log.e(TAG, "sendInitMsg failed: " + e);
             e.printStackTrace();
         }
+    }
+
+    public void sendIou() {
+
     }
 
     public void disconnect() {

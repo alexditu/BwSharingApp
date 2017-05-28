@@ -24,4 +24,12 @@
         android:layout_marginLeft="20dp"
         android:layout_marginTop="38dp"
         android:id="@+id/wifi_p2p_btn" />
+
+    <Button
+        android:id="@+id/iptables_act_btn"
+        android:text="IPTables Manager"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/wifi_p2p_btn"
+        />
 </RelativeLayout>

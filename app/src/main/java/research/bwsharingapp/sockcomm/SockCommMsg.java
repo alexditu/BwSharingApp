@@ -7,15 +7,15 @@ import java.io.Serializable;
  */
 
 public class SockCommMsg<T> implements Serializable {
-    public int type;
+    public MsgType type;
     public T data;
 
     public SockCommMsg() {
-        type = 0;
+        type = MsgType.HELLO;
         data = null;
     }
 
-    public SockCommMsg(int type, T data) {
+    public SockCommMsg(MsgType type, T data) {
         this.type = type;
         this.data = data;
     }
@@ -25,11 +25,11 @@ public class SockCommMsg<T> implements Serializable {
         return "{" + type + ", " + data + "}";
     }
 
-    public int getType() {
+    public MsgType getType() {
         return type;
     }
 
-    public void setType(int type) {
+    public void setType(MsgType type) {
         this.type = type;
     }
 

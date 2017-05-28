@@ -11,6 +11,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
+import research.bwsharingapp.iptables.IPTablesManagerActivity;
 import research.bwsharingapp.p2p.P2PMainActivity;
 import research.bwsharingapp.p2p.P2PReceiver;
 
@@ -48,6 +49,15 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 startActivity(intent);
+            }
+        });
+
+        Button startIPTables = (Button) findViewById(R.id.iptables_act_btn);
+        final Intent iptables = new Intent(this, IPTablesManagerActivity.class);
+        startIPTables.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startActivity(iptables);
             }
         });
     }

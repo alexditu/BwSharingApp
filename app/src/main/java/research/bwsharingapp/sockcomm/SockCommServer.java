@@ -123,11 +123,11 @@ class ServerWorkerThread extends Thread {
 
             Log.d(TAG, "Sending reply");
             output = new ObjectOutputStream(clientSocket.getOutputStream());
-            if (request.getType() == 0) {
-                SockCommMsg<String> reply = new SockCommMsg<String>(1, "Ok");
+            if (request.getType() == MsgType.HELLO) {
+                SockCommMsg<String> reply = new SockCommMsg<String>(MsgType.HELLO, "Ok");
                 output.writeObject(reply);
              } else {
-                SockCommMsg<String> reply = new SockCommMsg<String>(-1, "Error: invalid type for first msg");
+                SockCommMsg<String> reply = new SockCommMsg<String>(MsgType.ERROR, "Error: invalid type for first msg");
                 output.writeObject(reply);
                 output.flush();
             }

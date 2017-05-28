@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/scroll"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:orientation="vertical" android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <Button
+            android:text="Print IN/OUT stats"
+            android:id="@+id/print_in_out_stats_btn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+        <Button
+            android:text="Print FW stats"
+            android:id="@+id/print_fw_stats_btn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+        <Button
+            android:text="Set IN/OUT Rules"
+            android:id="@+id/set_in_out_rules_btn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+        <Button
+            android:text="Set FW Rules"
+            android:id="@+id/set_fw_rules_btn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+        <Button
+            android:text="Zero IN stats"
+            android:id="@+id/zero_in_stats_btn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+        <Button
+            android:text="Zero OUT stats"
+            android:id="@+id/zero_out_stats_btn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+        <Button
+            android:text="Zero FW stats"
+            android:id="@+id/zero_fw_stats_btn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <Button
+            android:text="Client Enable Networking"
+            android:id="@+id/client_enable_net_btn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+        <Button
+            android:text="Router Enable Networking"
+            android:id="@+id/router_enable_net_btn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+    </LinearLayout>
+    </ScrollView>

@@ -1,6 +1,8 @@
 package research.bwsharingapp.p2p;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.ColorStateList;
 import android.net.wifi.WpsInfo;
@@ -27,9 +29,14 @@ import java.util.Collection;
 import java.util.List;
 
 import research.bwsharingapp.R;
+import research.bwsharingapp.bg.ClientAccountingService;
+import research.bwsharingapp.bg.RouterAccountingService;
+import research.bwsharingapp.bg.pojo.ServiceInfo;
 import research.bwsharingapp.sockcomm.CommConstants;
 import research.bwsharingapp.sockcomm.SockCommClient;
 import research.bwsharingapp.sockcomm.SockCommServer;
+
+import static research.bwsharingapp.bg.AccountingService.KB_INFO_TAG;
 
 /**
  * Created by alex on 1/17/17.
@@ -208,11 +215,41 @@ public class P2PMainActivity extends AppCompatActivity {
             }
         });
 
+        final Activity mainActivity = this;
+
         Button createServerBtn = (Button) findViewById(R.id.create_server_btn);
-        createServerBtn.setOnClickListener(new ServerAction());
+        createServerBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (!serverStared) {
+                    Intent intent = new Intent(mainActivity, RouterAccountingService.class);
+                    intent.putExtra(KB_INFO_TAG, new ServiceInfo(ROUTER_IP, CLIENT_IP, ROUTER_PORT));
+                    startService(intent);
+                    serverStared = true;
+                } else {
+                    Intent intent = new Intent(mainActivity, RouterAccountingService.class);
+                    stopService(intent);
+                    serverStared = false;
+                }
+            }
+        });
 
         Button clientMsgBtn = (Button) findViewById(R.id.client_msg_btn);
-        clientMsgBtn.setOnClickListener(new ClientAction());
+        clientMsgBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (!clientStarted) {
+                    Intent intent = new Intent(mainActivity, ClientAccountingService.class);
+                    intent.putExtra(KB_INFO_TAG, new ServiceInfo(ROUTER_IP, CLIENT_IP, ROUTER_PORT));
+                    startService(intent);
+                    clientStarted = true;
+                } else {
+                    Intent intent = new Intent(mainActivity, ClientAccountingService.class);
+                    stopService(intent);
+                    clientStarted = false;
+                }
+            }
+        });
     }
 
     private void setPeersListView() {
@@ -393,6 +430,9 @@ public class P2PMainActivity extends AppCompatActivity {
     private static boolean clientStarted = false;
     private SockCommServer server;
     private SockCommClient client;
+    public static final String ROUTER_IP    = "192.168.49.1";  // s2 plus
+    public static final String CLIENT_IP    = "192.168.49.10"; // s2
+    public static final String ROUTER_PORT  = "5555";
     class ServerAction implements View.OnClickListener {
 
 

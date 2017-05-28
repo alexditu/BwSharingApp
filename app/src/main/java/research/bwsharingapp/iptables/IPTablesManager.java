@@ -34,6 +34,13 @@ public class IPTablesManager {
     public static final String C_ZERO_INBOUND_STATS     = "-t filter -Z INPUT";
     public static final String C_ZERO_OUTBOUND_STATS    = "-t filter -Z OUTPUT";
 
+    private static final String ENABLE_IP_FORWARDING        = "echo 1 > /proc/sys/net/ipv4/ip_forward";
+    private static final String DISABLE_IP_FORWARDING       = "echo 0 > /proc/sys/net/ipv4/ip_forward";
+    private static final String GET_IP_FORWARDING_STATUS    = "cat /proc/sys/net/ipv4/ip_forward";
+    private static final String SET_MASQUERADE_CMD          = "-I POSTROUTING 1 -t nat -o rmnet0 -j MASQUERADE";
+    private static final String SET_DNS_CMD                 = "setprop net.dns1 8.8.8.8";
+    private static final String SET_DEFAULT_ROUTE_CMD       = "ip r a default via %s";
+
     public IPTablesManager() {
     }
 
@@ -64,17 +71,31 @@ public class IPTablesManager {
     }
 
     public static void setClientIptablesRules(String id) throws ExecFailedException {
-        execCmd(String.format(C_DEL_INBOUND_CMD, id));
-        execCmd(String.format(C_DEL_OUTBOUND_CMD, id));
-
+        try {
+            execCmd(String.format(C_DEL_INBOUND_CMD, id));
+        } catch (ExecFailedException e) {
+            Log.d(TAG, "Rule '" + C_SET_INBOUND_CMD + "' not set");
+        }
+        try {
+            execCmd(String.format(C_DEL_OUTBOUND_CMD, id));
+        } catch (ExecFailedException e) {
+            Log.d(TAG, "Rule '" + C_SET_OUTBOUND_CMD + "' not set");
+        }
         execCmd(String.format(C_SET_INBOUND_CMD, id));
         execCmd(String.format(C_SET_OUTBOUND_CMD, id));
     }
 
     public static void setRouterIptablesRules(String clientIp, String id) throws ExecFailedException {
-        execCmd(String.format(R_DEL_FW_INBOUND_CMD, clientIp, id));
-        execCmd(String.format(R_DEL_FW_OUTBOUND_CMD, clientIp, id));
-
+        try {
+            execCmd(String.format(R_DEL_FW_INBOUND_CMD, clientIp, id));
+        } catch (ExecFailedException e) {
+            Log.d(TAG, "Rule '" + R_SET_FW_INBOUND_CMD + "' not set");
+        }
+        try {
+            execCmd(String.format(R_DEL_FW_OUTBOUND_CMD, clientIp, id));
+        } catch (ExecFailedException e) {
+            Log.d(TAG, "Rule '" + R_SET_FW_OUTBOUND_CMD + "' not set");
+        }
         execCmd(String.format(R_SET_FW_INBOUND_CMD, clientIp, id));
         execCmd(String.format(R_SET_FW_OUTBOUND_CMD, clientIp, id));
     }
@@ -166,6 +187,68 @@ public class IPTablesManager {
             throw new ExecFailedException(-105);
         }
         return output;
+    }
+
+    public static void printInputStats(String id) throws IOException, ExecFailedException {
+        String cmd = String.format(C_GET_INBOUND_STATS, id);
+        ArrayList<String> output = execCmdAndReadOutput(cmd);
+        printOutput(output);
+    }
+    public static void printOutputStats(String id) throws IOException, ExecFailedException {
+        String cmd = String.format(C_GET_OUTBOUND_STATS, id);
+        ArrayList<String> output = execCmdAndReadOutput(cmd);
+        printOutput(output);
+    }
+    public static void printForwardStats(String id) throws IOException, ExecFailedException {
+        String cmd = String.format(R_GET_FW_STATS, id);
+        ArrayList<String> output = execCmdAndReadOutput(cmd);
+        printOutput(output);
+    }
+
+
+
+
+    private static void enableIPForward() throws ExecFailedException {
+        String cmdArray[] = new String[] {"su", "-c", ENABLE_IP_FORWARDING};
+        Process proc = exec(cmdArray);
+    }
+    private static void disableIPForward() throws ExecFailedException {
+        String cmdArray[] = new String[] {"su", "-c", DISABLE_IP_FORWARDING};
+        Process proc = exec(cmdArray);
+    }
+    private static String getIPForwardStatus() throws ExecFailedException, IOException {
+        String cmdArray[] = new String[] {"su", "-c", GET_IP_FORWARDING_STATUS};
+        Process proc = exec(cmdArray);
+        ArrayList<String> output = readProcessOutput(proc);
+        if (output != null && output.size() > 0)
+            return output.get(0);
+        else
+            return "-1";
+    }
+
+    private static void setMasquerade() throws ExecFailedException {
+        execCmd(SET_MASQUERADE_CMD);
+    }
+
+    private static void setDNS() throws ExecFailedException {
+        String cmdArray[] = new String[] {"su", "-c", SET_DNS_CMD};
+        Process proc = exec(cmdArray);
+    }
+
+    private static void setDefaultRoute(String gatewayIp) throws ExecFailedException {
+        String cmd = String.format(SET_DEFAULT_ROUTE_CMD, gatewayIp);
+        String cmdArray[] = new String[] {"su", "-c", cmd};
+        Process proc = exec(cmdArray);
+    }
+
+    public static void clientEnableNetworking(String routerIp) throws ExecFailedException {
+        setDefaultRoute(routerIp);
+        setDNS();
+    }
+
+    public static void routerEnableNetworking() throws ExecFailedException {
+        enableIPForward();
+        setMasquerade();
     }
 
 

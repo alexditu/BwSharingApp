@@ -18,6 +18,7 @@ public class AccountingService extends Service {
     private final static String TAG = "AccountingService";
 
     protected boolean stopService = false;
+    public static final String KB_INFO_TAG  = "kibbutz_info";
 
     @Override
     public void onCreate() {

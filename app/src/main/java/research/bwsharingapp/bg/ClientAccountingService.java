@@ -1,13 +1,17 @@
 package research.bwsharingapp.bg;
 
 import android.util.Log;
+import android.widget.Toast;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 import research.bwsharingapp.bg.pojo.ServiceInfo;
+import research.bwsharingapp.sockcomm.CommConstants;
+import research.bwsharingapp.sockcomm.SockCommClient;
 
 /**
  * Created by alex on 5/27/17.
@@ -16,10 +20,10 @@ import research.bwsharingapp.bg.pojo.ServiceInfo;
 public class ClientAccountingService extends AccountingService {
     private final static String TAG = "ClientAccountingService";
 
-    public static final String KB_INFO_TAG  = "kibbutz_info";
+
 
     private ServiceInfo kb;
-
+    private SockCommClient client;
 
     @Override
     protected void startAccounting(ServiceInfo kb) {
@@ -27,32 +31,54 @@ public class ClientAccountingService extends AccountingService {
         this.kb = kb;
 
         try {
-            sendData();
+            startCommClient();
         } catch (Exception e) {
             Log.d(TAG, "sendData exception: " + e);
         }
     }
 
-    private void sendData() throws IOException, InterruptedException {
-        byte buf[] = new byte[1024];
-        byte data[] = new String("ana").getBytes();
 
-        System.arraycopy(data, 0, buf, 0, 3);
 
-        int port = Integer.parseInt(kb.getRouterPort());
-        InetAddress serverAddr = InetAddress.getByName(kb.getRouterIp());
-        DatagramSocket s = new DatagramSocket();
+    private void startCommClient() throws UnknownHostException {
+        InetAddress ip  = InetAddress.getByName(kb.getRouterIp());
+        int port        = Integer.parseInt(kb.getRouterPort());
 
-        DatagramPacket p = new DatagramPacket(buf, 1024, serverAddr, port);
+        client = new SockCommClient(ip, port);
+        boolean connected = client.connect();
 
-        int count = 0;
-        while (count < 10 && !stopService) {
-            Log.d(TAG, "Sending packet: " + count);
-            s.send(p);
-            Log.d(TAG, "Done Sending packet: " + count);
-            count++;
-            Thread.sleep(1000);
+        if (connected) {
+            client.sendInitMsg();
         }
-
     }
+
+    @Override
+    public void onDestroy() {
+        Toast.makeText(this, TAG + " onDestroy()", Toast.LENGTH_SHORT).show();
+        Log.d(TAG, "Stopping sockCommClient: " + client);
+        client.disconnect();
+    }
+
+
+//    private void sendData() throws IOException, InterruptedException {
+//        byte buf[] = new byte[1024];
+//        byte data[] = new String("ana").getBytes();
+//
+//        System.arraycopy(data, 0, buf, 0, 3);
+//
+//        int port = Integer.parseInt(kb.getRouterPort());
+//        InetAddress serverAddr = InetAddress.getByName(kb.getRouterIp());
+//        DatagramSocket s = new DatagramSocket();
+//
+//        DatagramPacket p = new DatagramPacket(buf, 1024, serverAddr, port);
+//
+//        int count = 0;
+//        while (count < 10 && !stopService) {
+//            Log.d(TAG, "Sending packet: " + count);
+//            s.send(p);
+//            Log.d(TAG, "Done Sending packet: " + count);
+//            count++;
+//            Thread.sleep(1000);
+//        }
+//
+//    }
 }
