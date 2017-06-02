@@ -47,7 +47,10 @@ public class ClientAccountingService extends AccountingService {
         boolean connected = client.connect();
 
         if (connected) {
-            client.sendInitMsg();
+            client.sendIou();
+        } else {
+            Log.e(TAG, "Client cannot connect to server!");
+            Toast.makeText(this, "Client cannot connect to server!", Toast.LENGTH_LONG).show();
         }
     }
 

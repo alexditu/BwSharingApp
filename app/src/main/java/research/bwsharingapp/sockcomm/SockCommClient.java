@@ -8,6 +8,14 @@ import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 
+import research.bwsharingapp.iou.IOU_1;
+import research.bwsharingapp.iptables.ExecFailedException;
+import research.bwsharingapp.iptables.IPTablesManager;
+import research.bwsharingapp.iptables.IPTablesParserException;
+import research.bwsharingapp.iptables.TrafficInfo;
+
+import static research.bwsharingapp.MainActivity.CLIENT_ID;
+
 /**
  * Created by alex on 4/30/17.
  */
@@ -20,6 +28,8 @@ public class SockCommClient {
     private Socket sock;
     private ObjectInputStream input = null;
     private ObjectOutputStream output = null;
+
+    private boolean stop = false;
 
     public SockCommClient(InetAddress ipAddr, int port) {
         Log.d(TAG, "SockCommClient: " + ipAddr.getHostAddress() + ":" + port);
@@ -64,11 +74,30 @@ public class SockCommClient {
     }
 
     public void sendIou() {
+        try {
 
+            while (!stop) {
+                TrafficInfo in = IPTablesManager.getInputStats(CLIENT_ID);
+                TrafficInfo out = IPTablesManager.getOutputStats(CLIENT_ID);
+                IOU_1 iou = new IOU_1(in, out);
+                SockCommMsg<IOU_1> msg = new SockCommMsg<>(MsgType.IOU_1, iou);
+
+                Log.d(TAG, "Sending IOU_1 msg: " + msg);
+                output = new ObjectOutputStream(sock.getOutputStream());
+                output.writeObject(msg);
+                output.flush();
+                Log.d(TAG, "Msg sent.");
+
+                Thread.sleep(1000);
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "Exception while sending IOU: " + e);
+        }
     }
 
     public void disconnect() {
         try {
+            stop = true;
             sock.close();
         } catch (IOException e) {
             e.printStackTrace();

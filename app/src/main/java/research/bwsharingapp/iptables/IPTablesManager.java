@@ -18,13 +18,13 @@ public class IPTablesManager {
 
     public static final String R_SET_FW_INBOUND_CMD     = "-t filter -I FORWARD 1 -d %s/32 -j LOG --log-prefix %s__INBOUND";
     public static final String R_SET_FW_OUTBOUND_CMD    = "-t filter -I FORWARD 1 -s %s/32 -j LOG --log-prefix %s_OUTBOUND";
-    public static final String C_SET_INBOUND_CMD        = "-t filter -I INPUT 1 -j LOG --log-prefix %s__INBOUND";
-    public static final String C_SET_OUTBOUND_CMD       = "-t filter -I OUTPUT 1 -j LOG --log-prefix %s_OUTBOUND";
+    public static final String C_SET_INBOUND_CMD        = "-t filter -I INPUT 1 -s ! %s/24 -j LOG --log-prefix %s__INBOUND";
+    public static final String C_SET_OUTBOUND_CMD       = "-t filter -I OUTPUT 1 -d ! %s/24 -j LOG --log-prefix %s_OUTBOUND";
 
     public static final String R_DEL_FW_INBOUND_CMD     = "-t filter -D FORWARD -d %s/32 -j LOG --log-prefix %s__INBOUND";
     public static final String R_DEL_FW_OUTBOUND_CMD    = "-t filter -D FORWARD -s %s/32 -j LOG --log-prefix %s_OUTBOUND";
-    public static final String C_DEL_INBOUND_CMD        = "-t filter -D INPUT -j LOG --log-prefix %s__INBOUND";
-    public static final String C_DEL_OUTBOUND_CMD       = "-t filter -D OUTPUT -j LOG --log-prefix %s_OUTBOUND";
+    public static final String C_DEL_INBOUND_CMD        = "-t filter -D INPUT -s ! %s/24 -j LOG --log-prefix %s__INBOUND";
+    public static final String C_DEL_OUTBOUND_CMD       = "-t filter -D OUTPUT -d ! %s/24 -j LOG --log-prefix %s_OUTBOUND";
 
     public static final String R_GET_FW_STATS           = "-t filter -L FORWARD -nvx --line-numbers";
     public static final String C_GET_INBOUND_STATS      = "-t filter -L INPUT --line-numbers -nvx";
@@ -60,6 +60,7 @@ public class IPTablesManager {
         return info;
     }
 
+
     public static TrafficInfo[] getFwStats(String id) throws IOException, ExecFailedException, IPTablesParserException {
         String cmd = String.format(R_GET_FW_STATS, id);
         ArrayList<String> output = execCmdAndReadOutput(cmd);
@@ -70,19 +71,19 @@ public class IPTablesManager {
         return result;
     }
 
-    public static void setClientIptablesRules(String id) throws ExecFailedException {
+    public static void setClientIptablesRules(String routerIp, String id) throws ExecFailedException {
         try {
-            execCmd(String.format(C_DEL_INBOUND_CMD, id));
+            execCmd(String.format(C_DEL_INBOUND_CMD, routerIp, id));
         } catch (ExecFailedException e) {
             Log.d(TAG, "Rule '" + C_SET_INBOUND_CMD + "' not set");
         }
         try {
-            execCmd(String.format(C_DEL_OUTBOUND_CMD, id));
+            execCmd(String.format(C_DEL_OUTBOUND_CMD, routerIp, id));
         } catch (ExecFailedException e) {
             Log.d(TAG, "Rule '" + C_SET_OUTBOUND_CMD + "' not set");
         }
-        execCmd(String.format(C_SET_INBOUND_CMD, id));
-        execCmd(String.format(C_SET_OUTBOUND_CMD, id));
+        execCmd(String.format(C_SET_INBOUND_CMD, routerIp, id));
+        execCmd(String.format(C_SET_OUTBOUND_CMD, routerIp, id));
     }
 
     public static void setRouterIptablesRules(String clientIp, String id) throws ExecFailedException {
@@ -110,6 +111,32 @@ public class IPTablesManager {
 
     public static void clearOutputStats() throws ExecFailedException {
         execCmd(C_ZERO_OUTBOUND_STATS);
+    }
+
+    public static void deleteRouterIptablesRules(String clientIp, String id) throws ExecFailedException {
+        try {
+            execCmd(String.format(R_DEL_FW_INBOUND_CMD, clientIp, id));
+        } catch (ExecFailedException e) {
+            Log.d(TAG, "Rule '" + R_SET_FW_INBOUND_CMD + "' not set");
+        }
+        try {
+            execCmd(String.format(R_DEL_FW_OUTBOUND_CMD, clientIp, id));
+        } catch (ExecFailedException e) {
+            Log.d(TAG, "Rule '" + R_SET_FW_OUTBOUND_CMD + "' not set");
+        }
+    }
+
+    public static void deleteClientIptablesRules(String routerIp, String id) throws ExecFailedException {
+        try {
+            execCmd(String.format(C_DEL_INBOUND_CMD, routerIp, id));
+        } catch (ExecFailedException e) {
+            Log.d(TAG, "Rule '" + C_SET_INBOUND_CMD + "' not set");
+        }
+        try {
+            execCmd(String.format(C_DEL_OUTBOUND_CMD, routerIp, id));
+        } catch (ExecFailedException e) {
+            Log.d(TAG, "Rule '" + C_SET_OUTBOUND_CMD + "' not set");
+        }
     }
 
 

@@ -18,6 +18,9 @@ import research.bwsharingapp.p2p.P2PReceiver;
 public class MainActivity extends AppCompatActivity {
     private final static String TAG = "MainActivity";
 
+    public final static String CLIENT_ID = "C";
+    public final static String ROUTER_ID = "R";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

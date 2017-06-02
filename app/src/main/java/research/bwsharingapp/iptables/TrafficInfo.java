@@ -1,10 +1,12 @@
 package research.bwsharingapp.iptables;
 
+import java.io.Serializable;
+
 /**
  * Created by alex on 5/21/17.
  */
 
-public class TrafficInfo {
+public class TrafficInfo implements Serializable {
     public String pkts;
     public String bytes;
     public String src;

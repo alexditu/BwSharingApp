@@ -10,14 +10,14 @@ import java.io.IOException;
 
 import research.bwsharingapp.R;
 
+import static research.bwsharingapp.MainActivity.CLIENT_ID;
 import static research.bwsharingapp.p2p.P2PMainActivity.CLIENT_IP;
 import static research.bwsharingapp.p2p.P2PMainActivity.ROUTER_IP;
 
 public class IPTablesManagerActivity extends AppCompatActivity {
     private final static String TAG = "IPTablesManagerActivity";
 
-    private final static String CLIENT_ID = "C";
-    private final static String ROUTER_ID = "R";
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,7 +62,7 @@ public class IPTablesManagerActivity extends AppCompatActivity {
             public void onClick(View v) {
                 try {
                     Log.d(TAG, "Setting client rules");
-                    IPTablesManager.setClientIptablesRules(CLIENT_ID);
+                    IPTablesManager.setClientIptablesRules(ROUTER_IP, CLIENT_ID);
                 } catch (Exception e) {
                     Log.e(TAG, "Failed to print status: " + e);
                 }
@@ -115,6 +115,32 @@ public class IPTablesManagerActivity extends AppCompatActivity {
                 try {
                     Log.d(TAG, "Clear fw stats");
                     IPTablesManager.clearForwardStats();
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed to print status: " + e);
+                }
+            }
+        });
+
+        btn = (Button) findViewById(R.id.del_in_out_rules_btn);
+        btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    Log.d(TAG, "Delete IN/OUT rules");
+                    IPTablesManager.deleteClientIptablesRules(ROUTER_IP, CLIENT_ID);
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed to print status: " + e);
+                }
+            }
+        });
+
+        btn = (Button) findViewById(R.id.del_fw_rules_btn);
+        btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    Log.d(TAG, "Delete FW rules");
+                    IPTablesManager.deleteRouterIptablesRules(CLIENT_IP, CLIENT_ID);
                 } catch (Exception e) {
                     Log.e(TAG, "Failed to print status: " + e);
                 }

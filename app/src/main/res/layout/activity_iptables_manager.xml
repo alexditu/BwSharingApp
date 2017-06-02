@@ -46,6 +46,17 @@
             android:layout_height="wrap_content"/>
 
         <Button
+            android:text="Client Delete Rules"
+            android:id="@+id/del_in_out_rules_btn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+        <Button
+            android:text="Router Delete Rules"
+            android:id="@+id/del_fw_rules_btn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <Button
             android:text="Client Enable Networking"
             android:id="@+id/client_enable_net_btn"
             android:layout_width="match_parent"
@@ -55,6 +66,10 @@
             android:id="@+id/router_enable_net_btn"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"/>
+
+
+
+
 
     </LinearLayout>
     </ScrollView>

@@ -11,8 +11,15 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
+
+import research.bwsharingapp.iou.IOU_1;
+import research.bwsharingapp.iptables.IPTablesManager;
+import research.bwsharingapp.iptables.TrafficInfo;
+
+import static research.bwsharingapp.MainActivity.CLIENT_ID;
 
 /**
  * Created by alex on 4/30/17.
@@ -79,6 +86,12 @@ public class SockCommServer {
     public boolean stop() {
         try {
             serverSocket.close();
+
+            synchronized (this) {
+                for (ServerWorkerThread worker : workerThreadPool) {
+                    worker.interrupt();
+                }
+            }
         } catch (IOException e) {
             Log.e(TAG, "Exception while closing serverSocket: " + e);
             e.printStackTrace();
@@ -111,33 +124,50 @@ class ServerWorkerThread extends Thread {
         this.clientSocket = clientSocket;
     }
 
+    private String fmt(String value) {
+        DecimalFormat myFormatter = new DecimalFormat("###,###.###");
+        String output = myFormatter.format(Double.parseDouble(value));
+        return output;
+    }
+
     @Override
     public void run() {
         ObjectInputStream input = null;
         ObjectOutputStream output = null;
         try {
-            Log.d(TAG, "Reading message");
-            input = new ObjectInputStream(clientSocket.getInputStream());
-            SockCommMsg<Void> request = (SockCommMsg<Void>) input.readObject();
-            Log.d(TAG, "Message read: " + request);
 
-            Log.d(TAG, "Sending reply");
-            output = new ObjectOutputStream(clientSocket.getOutputStream());
-            if (request.getType() == MsgType.HELLO) {
-                SockCommMsg<String> reply = new SockCommMsg<String>(MsgType.HELLO, "Ok");
-                output.writeObject(reply);
-             } else {
-                SockCommMsg<String> reply = new SockCommMsg<String>(MsgType.ERROR, "Error: invalid type for first msg");
-                output.writeObject(reply);
-                output.flush();
+            while (true) {
+                Log.d(TAG, "Reading message");
+                input = new ObjectInputStream(clientSocket.getInputStream());
+                Object ob = input.readObject();
+                SockCommMsg<IOU_1> request = (SockCommMsg<IOU_1>) ob;
+//                Log.d(TAG, "Message read: " + request);
+
+                TrafficInfo fw[] = IPTablesManager.getFwStats(CLIENT_ID);
+                Log.d(TAG, "client stats bytes: " +
+                        fmt(request.getData().getInput().bytes) + "\t\t" +
+                        fmt(request.getData().getOutput().bytes));
+                Log.d(TAG, "router stats bytes: " +
+                        fmt(fw[0].bytes) + "\t\t" +
+                        fmt(fw[1].bytes));
             }
 
-            input.close();
-            output.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
+
+//            Log.d(TAG, "Sending reply");
+//            output = new ObjectOutputStream(clientSocket.getOutputStream());
+//            if (request.getType() == MsgType.HELLO) {
+//                SockCommMsg<String> reply = new SockCommMsg<String>(MsgType.HELLO, "Ok");
+//                output.writeObject(reply);
+//             } else {
+//                SockCommMsg<String> reply = new SockCommMsg<String>(MsgType.ERROR, "Error: invalid type for first msg");
+//                output.writeObject(reply);
+//                output.flush();
+//            }
+//
+//            input.close();
+//            output.close();
+        } catch (Exception e) {
+            Log.d(TAG, "Exception in server worker thread: " + e);
         }
 
         removeWorker(this);
