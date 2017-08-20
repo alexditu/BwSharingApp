@@ -3,9 +3,11 @@ package research.bwsharingapp.iptables;
 import android.util.Log;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.util.ArrayList;
 
 /**
@@ -37,7 +39,11 @@ public class IPTablesManager {
     private static final String ENABLE_IP_FORWARDING        = "echo 1 > /proc/sys/net/ipv4/ip_forward";
     private static final String DISABLE_IP_FORWARDING       = "echo 0 > /proc/sys/net/ipv4/ip_forward";
     private static final String GET_IP_FORWARDING_STATUS    = "cat /proc/sys/net/ipv4/ip_forward";
-    private static final String SET_MASQUERADE_CMD          = "-I POSTROUTING 1 -t nat -o rmnet0 -j MASQUERADE";
+    /*
+     * TODO: use rmnet0 for real phones and eth0 for emulators
+     * private static final String SET_MASQUERADE_CMD          = "-I POSTROUTING 1 -t nat -o rmnet0 -j MASQUERADE";
+     */
+    private static final String SET_MASQUERADE_CMD          = "-I POSTROUTING 1 -t nat -o eth0 -j MASQUERADE";
     private static final String SET_DNS_CMD                 = "setprop net.dns1 8.8.8.8";
     private static final String SET_DEFAULT_ROUTE_CMD       = "ip r a default via %s";
 
@@ -172,7 +178,39 @@ public class IPTablesManager {
         }
 
         if (ret != 0) {
-            Log.e(TAG, "Failed to exec cmd: '%s" + getStringCmd(cmd) + "', exit code: " + ret);
+            Log.e(TAG, "Failed to exec cmd: '" + getStringCmd(cmd) + "', exit code: " + ret);
+            throw new ExecFailedException(ret);
+        } else {
+            return p;
+        }
+    }
+
+    /*
+     * It turns out that exec(cmdArray[]) does not work properly
+     */
+    private static Process exec(final String cmd) throws ExecFailedException {
+        Process p = null;
+        int ret = -1001;
+
+        Runtime runtime = Runtime.getRuntime();
+        try {
+            p = runtime.exec("/system/xbin/su");
+            OutputStream stdout = p.getOutputStream();
+            stdout.write(cmd.getBytes());
+            stdout.flush();
+            stdout.close();
+            ret = p.waitFor();
+            Log.d(TAG, "p.waitFor() ret: " + ret);
+        } catch (IOException e) {
+            Log.e(TAG, "Exception while running exec with cmd: '" + cmd + "' : " + e);
+            ret = -100;
+        } catch (InterruptedException e) {
+            Log.e(TAG, "Exception while waiting for process to finnish: " + e);
+            ret = -101;
+        }
+
+        if (ret != 0) {
+            Log.e(TAG, "Failed to exec cmd: '" + cmd + "', exit code: " + ret);
             throw new ExecFailedException(ret);
         } else {
             return p;
@@ -199,8 +237,14 @@ public class IPTablesManager {
     }
 
     private static void execCmd(String cmd) throws ExecFailedException {
-        String cmdArray[] = new String[] {"su", "-c", IPTABLES_BIN, cmd};
+        String cmdArray[] = new String[] {"/system/xbin/su", "-c", IPTABLES_BIN, cmd};
         Process proc = exec(cmdArray);
+    }
+
+    private static void execCmd(String bin, String args) throws ExecFailedException {
+//        String cmdArray[] = new String[] {"/system/xbin/su", "-c", IPTABLES_BIN, cmd};
+        String cmd = "/system/xbin/su -c '" + bin + " " + args + "'";
+        Process proc = exec(cmd);
     }
 
     private static ArrayList<String> execCmdAndReadOutput(String cmd) throws IOException, ExecFailedException {
@@ -232,9 +276,6 @@ public class IPTablesManager {
         printOutput(output);
     }
 
-
-
-
     private static void enableIPForward() throws ExecFailedException {
         String cmdArray[] = new String[] {"su", "-c", ENABLE_IP_FORWARDING};
         Process proc = exec(cmdArray);
@@ -253,8 +294,12 @@ public class IPTablesManager {
             return "-1";
     }
 
+    private static void execIptablesCmd(final String args) throws ExecFailedException {
+        execCmd(IPTABLES_BIN, args);
+    }
+
     private static void setMasquerade() throws ExecFailedException {
-        execCmd(SET_MASQUERADE_CMD);
+        execIptablesCmd(SET_MASQUERADE_CMD);
     }
 
     private static void setDNS() throws ExecFailedException {
