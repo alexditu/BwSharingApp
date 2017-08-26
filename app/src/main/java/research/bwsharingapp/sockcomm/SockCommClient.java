@@ -74,9 +74,9 @@ public class SockCommClient {
     }
 
     public void sendIou() {
-        try {
-
-            while (!stop) {
+        int exceptionCount = 0;
+        while (!stop) {
+            try {
                 TrafficInfo in = IPTablesManager.getInputStats(CLIENT_ID);
                 TrafficInfo out = IPTablesManager.getOutputStats(CLIENT_ID);
                 IOU_1 iou = new IOU_1(in, out);
@@ -89,9 +89,14 @@ public class SockCommClient {
                 Log.d(TAG, "Msg sent.");
 
                 Thread.sleep(1000);
+            } catch (Exception e) {
+                Log.d(TAG, "Exception while sending IOU: " + e);
+                exceptionCount++;
+                if (exceptionCount == 20) {
+                    Log.d(TAG, "Too many exceptions, giving up...");
+                    disconnect();
+                }
             }
-        } catch (Exception e) {
-            Log.d(TAG, "Exception while sending IOU: " + e);
         }
     }
 

@@ -430,9 +430,13 @@ public class P2PMainActivity extends AppCompatActivity {
     private static boolean clientStarted = false;
     private SockCommServer server;
     private SockCommClient client;
-    public static final String ROUTER_IP    = "192.168.49.1";  // s2 plus
-    public static final String CLIENT_IP    = "192.168.49.10"; // s2
-    public static final String ROUTER_PORT  = "5555";
+//    public static final String ROUTER_IP    = "192.168.49.1";  // s2 plus
+//    public static final String CLIENT_IP    = "192.168.49.10"; // s2
+    public static final String ROUTER_IP    = "192.168.56.101";  // API 16, 4.1.1
+    public static final String CLIENT_IP    = "192.168.56.102"; // API 17, 4.2.2
+
+
+    public static final String ROUTER_PORT  = "8080";
     class ServerAction implements View.OnClickListener {
 
 

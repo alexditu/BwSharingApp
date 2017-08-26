@@ -20,13 +20,13 @@ public class IPTablesManager {
 
     public static final String R_SET_FW_INBOUND_CMD     = "-t filter -I FORWARD 1 -d %s/32 -j LOG --log-prefix %s__INBOUND";
     public static final String R_SET_FW_OUTBOUND_CMD    = "-t filter -I FORWARD 1 -s %s/32 -j LOG --log-prefix %s_OUTBOUND";
-    public static final String C_SET_INBOUND_CMD        = "-t filter -I INPUT 1 -s ! %s/24 -j LOG --log-prefix %s__INBOUND";
-    public static final String C_SET_OUTBOUND_CMD       = "-t filter -I OUTPUT 1 -d ! %s/24 -j LOG --log-prefix %s_OUTBOUND";
+    public static final String C_SET_INBOUND_CMD        = "-t filter -I INPUT 1 ! -s %s/24 -j LOG --log-prefix %s__INBOUND";
+    public static final String C_SET_OUTBOUND_CMD       = "-t filter -I OUTPUT 1 ! -d %s/24 -j LOG --log-prefix %s_OUTBOUND";
 
     public static final String R_DEL_FW_INBOUND_CMD     = "-t filter -D FORWARD -d %s/32 -j LOG --log-prefix %s__INBOUND";
     public static final String R_DEL_FW_OUTBOUND_CMD    = "-t filter -D FORWARD -s %s/32 -j LOG --log-prefix %s_OUTBOUND";
-    public static final String C_DEL_INBOUND_CMD        = "-t filter -D INPUT -s ! %s/24 -j LOG --log-prefix %s__INBOUND";
-    public static final String C_DEL_OUTBOUND_CMD       = "-t filter -D OUTPUT -d ! %s/24 -j LOG --log-prefix %s_OUTBOUND";
+    public static final String C_DEL_INBOUND_CMD        = "-t filter -D INPUT ! -s %s/24 -j LOG --log-prefix %s__INBOUND";
+    public static final String C_DEL_OUTBOUND_CMD       = "-t filter -D OUTPUT ! -d %s/24 -j LOG --log-prefix %s_OUTBOUND";
 
     public static final String R_GET_FW_STATS           = "-t filter -L FORWARD -nvx --line-numbers";
     public static final String C_GET_INBOUND_STATS      = "-t filter -L INPUT --line-numbers -nvx";
@@ -43,7 +43,7 @@ public class IPTablesManager {
      * TODO: use rmnet0 for real phones and eth0 for emulators
      * private static final String SET_MASQUERADE_CMD          = "-I POSTROUTING 1 -t nat -o rmnet0 -j MASQUERADE";
      */
-    private static final String SET_MASQUERADE_CMD          = "-I POSTROUTING 1 -t nat -o eth0 -j MASQUERADE";
+    private static final String SET_MASQUERADE_CMD          = "-I POSTROUTING 1 -t nat -o eth1 -j MASQUERADE";
     private static final String SET_DNS_CMD                 = "setprop net.dns1 8.8.8.8";
     private static final String SET_DEFAULT_ROUTE_CMD       = "ip r a default via %s";
 
@@ -79,54 +79,54 @@ public class IPTablesManager {
 
     public static void setClientIptablesRules(String routerIp, String id) throws ExecFailedException {
         try {
-            execCmd(String.format(C_DEL_INBOUND_CMD, routerIp, id));
+            execIptablesCmd(String.format(C_DEL_INBOUND_CMD, routerIp, id));
         } catch (ExecFailedException e) {
             Log.d(TAG, "Rule '" + C_SET_INBOUND_CMD + "' not set");
         }
         try {
-            execCmd(String.format(C_DEL_OUTBOUND_CMD, routerIp, id));
+            execIptablesCmd(String.format(C_DEL_OUTBOUND_CMD, routerIp, id));
         } catch (ExecFailedException e) {
             Log.d(TAG, "Rule '" + C_SET_OUTBOUND_CMD + "' not set");
         }
-        execCmd(String.format(C_SET_INBOUND_CMD, routerIp, id));
-        execCmd(String.format(C_SET_OUTBOUND_CMD, routerIp, id));
+        execIptablesCmd(String.format(C_SET_INBOUND_CMD, routerIp, id));
+        execIptablesCmd(String.format(C_SET_OUTBOUND_CMD, routerIp, id));
     }
 
     public static void setRouterIptablesRules(String clientIp, String id) throws ExecFailedException {
         try {
-            execCmd(String.format(R_DEL_FW_INBOUND_CMD, clientIp, id));
+            execIptablesCmd(String.format(R_DEL_FW_INBOUND_CMD, clientIp, id));
         } catch (ExecFailedException e) {
             Log.d(TAG, "Rule '" + R_SET_FW_INBOUND_CMD + "' not set");
         }
         try {
-            execCmd(String.format(R_DEL_FW_OUTBOUND_CMD, clientIp, id));
+            execIptablesCmd(String.format(R_DEL_FW_OUTBOUND_CMD, clientIp, id));
         } catch (ExecFailedException e) {
             Log.d(TAG, "Rule '" + R_SET_FW_OUTBOUND_CMD + "' not set");
         }
-        execCmd(String.format(R_SET_FW_INBOUND_CMD, clientIp, id));
-        execCmd(String.format(R_SET_FW_OUTBOUND_CMD, clientIp, id));
+        execIptablesCmd(String.format(R_SET_FW_INBOUND_CMD, clientIp, id));
+        execIptablesCmd(String.format(R_SET_FW_OUTBOUND_CMD, clientIp, id));
     }
 
     public static void clearForwardStats() throws ExecFailedException {
-        execCmd(R_ZERO_FORWARD_STATS);
+        execIptablesCmd(R_ZERO_FORWARD_STATS);
     }
 
     public static void clearInputStats() throws ExecFailedException {
-        execCmd(C_ZERO_INBOUND_STATS);
+        execIptablesCmd(C_ZERO_INBOUND_STATS);
     }
 
     public static void clearOutputStats() throws ExecFailedException {
-        execCmd(C_ZERO_OUTBOUND_STATS);
+        execIptablesCmd(C_ZERO_OUTBOUND_STATS);
     }
 
     public static void deleteRouterIptablesRules(String clientIp, String id) throws ExecFailedException {
         try {
-            execCmd(String.format(R_DEL_FW_INBOUND_CMD, clientIp, id));
+            execIptablesCmd(String.format(R_DEL_FW_INBOUND_CMD, clientIp, id));
         } catch (ExecFailedException e) {
             Log.d(TAG, "Rule '" + R_SET_FW_INBOUND_CMD + "' not set");
         }
         try {
-            execCmd(String.format(R_DEL_FW_OUTBOUND_CMD, clientIp, id));
+            execIptablesCmd(String.format(R_DEL_FW_OUTBOUND_CMD, clientIp, id));
         } catch (ExecFailedException e) {
             Log.d(TAG, "Rule '" + R_SET_FW_OUTBOUND_CMD + "' not set");
         }
@@ -134,12 +134,12 @@ public class IPTablesManager {
 
     public static void deleteClientIptablesRules(String routerIp, String id) throws ExecFailedException {
         try {
-            execCmd(String.format(C_DEL_INBOUND_CMD, routerIp, id));
+            execIptablesCmd(String.format(C_DEL_INBOUND_CMD, routerIp, id));
         } catch (ExecFailedException e) {
             Log.d(TAG, "Rule '" + C_SET_INBOUND_CMD + "' not set");
         }
         try {
-            execCmd(String.format(C_DEL_OUTBOUND_CMD, routerIp, id));
+            execIptablesCmd(String.format(C_DEL_OUTBOUND_CMD, routerIp, id));
         } catch (ExecFailedException e) {
             Log.d(TAG, "Rule '" + C_SET_OUTBOUND_CMD + "' not set");
         }
@@ -186,7 +186,7 @@ public class IPTablesManager {
     }
 
     /*
-     * It turns out that exec(cmdArray[]) does not work properly
+     * It turns out that exec(cmdArray[]) does not work properly for iptables command
      */
     private static Process exec(final String cmd) throws ExecFailedException {
         Process p = null;
@@ -194,7 +194,7 @@ public class IPTablesManager {
 
         Runtime runtime = Runtime.getRuntime();
         try {
-            p = runtime.exec("/system/xbin/su");
+            p = runtime.exec("su", null, null);
             OutputStream stdout = p.getOutputStream();
             stdout.write(cmd.getBytes());
             stdout.flush();
@@ -236,25 +236,19 @@ public class IPTablesManager {
         }
     }
 
-    private static void execCmd(String cmd) throws ExecFailedException {
-        String cmdArray[] = new String[] {"/system/xbin/su", "-c", IPTABLES_BIN, cmd};
-        Process proc = exec(cmdArray);
-    }
-
-    private static void execCmd(String bin, String args) throws ExecFailedException {
-//        String cmdArray[] = new String[] {"/system/xbin/su", "-c", IPTABLES_BIN, cmd};
-        String cmd = "/system/xbin/su -c '" + bin + " " + args + "'";
+    private static Process execCmd(String bin, String args) throws ExecFailedException {
+        String cmd = bin + " " + args;
         Process proc = exec(cmd);
+        return proc;
     }
 
-    private static ArrayList<String> execCmdAndReadOutput(String cmd) throws IOException, ExecFailedException {
-        String cmdArray[] = new String[] {"su", "-c", IPTABLES_BIN, cmd};
-        Process proc = exec(cmdArray);
+    private static ArrayList<String> execCmdAndReadOutput(String args) throws IOException, ExecFailedException {
+        Process proc = execCmd(IPTABLES_BIN, args);
         ArrayList<String> output = readProcessOutput(proc);
 
         if (output == null) {
             // TODO: print error output stream for more info
-            Log.e(TAG, "getInputStats: failed to exec cmd: '" + getStringCmd(cmdArray) + "' output stream was empty!");
+            Log.e(TAG, "getInputStats: failed to exec cmd: '" + IPTABLES_BIN + " " + args + "' output stream was empty!");
             throw new ExecFailedException(-105);
         }
         return output;
@@ -304,13 +298,14 @@ public class IPTablesManager {
 
     private static void setDNS() throws ExecFailedException {
         String cmdArray[] = new String[] {"su", "-c", SET_DNS_CMD};
-        Process proc = exec(cmdArray);
+//        Process proc = exec(cmdArray);
+        Process proc = execCmd(SET_DNS_CMD, "");
     }
 
     private static void setDefaultRoute(String gatewayIp) throws ExecFailedException {
         String cmd = String.format(SET_DEFAULT_ROUTE_CMD, gatewayIp);
         String cmdArray[] = new String[] {"su", "-c", cmd};
-        Process proc = exec(cmdArray);
+        Process proc = execCmd(cmd, "");
     }
 
     public static void clientEnableNetworking(String routerIp) throws ExecFailedException {
