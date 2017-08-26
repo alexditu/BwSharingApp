@@ -15,9 +15,14 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
 import research.bwsharingapp.iou.IOU_1;
 import research.bwsharingapp.iptables.IPTablesManager;
 import research.bwsharingapp.iptables.TrafficInfo;
+import research.bwsharingapp.proto.helloworld.GreeterGrpc;
+import research.bwsharingapp.proto.helloworld.HelloReply;
+import research.bwsharingapp.proto.helloworld.HelloRequest;
 
 import static research.bwsharingapp.MainActivity.CLIENT_ID;
 
@@ -181,8 +186,26 @@ class ServerWorkerThread extends Thread {
 
         }
 
+        void test() {
+            try {
+                String mHost = "192.168.0.105";
+                int mPort = 50051;
+                ManagedChannel mChannel = ManagedChannelBuilder.forAddress(mHost, mPort)
+                        .usePlaintext(true)
+                        .build();
+                GreeterGrpc.GreeterBlockingStub stub = GreeterGrpc.newBlockingStub(mChannel);
+                HelloRequest message = HelloRequest.newBuilder().setName("test123").build();
+                HelloReply reply = stub.sayHello(message);
+                Log.d(TAG, "recv message: " + reply.getMessage());
+            } catch (Exception e) {
+                Log.e(TAG, "Exception: " + e);
+            }
+        }
+
         @Override
         public void run() {
+            test();
+
             try {
                 while(true) {
                     Log.d(TAG, "Waiting for clients...");
