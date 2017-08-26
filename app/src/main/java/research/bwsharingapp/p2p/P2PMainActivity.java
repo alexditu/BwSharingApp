@@ -32,6 +32,7 @@ import research.bwsharingapp.R;
 import research.bwsharingapp.bg.ClientAccountingService;
 import research.bwsharingapp.bg.RouterAccountingService;
 import research.bwsharingapp.bg.pojo.ServiceInfo;
+import research.bwsharingapp.proto.helloworld.HelloRequest;
 import research.bwsharingapp.sockcomm.CommConstants;
 import research.bwsharingapp.sockcomm.SockCommClient;
 import research.bwsharingapp.sockcomm.SockCommServer;
@@ -88,6 +89,8 @@ public class P2PMainActivity extends AppCompatActivity {
         setOnClickListeners();
         setPeersListView();
         setConnectionStatus(0, null);
+
+        HelloRequest helloRequest = HelloRequest.newBuilder().setName("Android").build();
 
 
     }
