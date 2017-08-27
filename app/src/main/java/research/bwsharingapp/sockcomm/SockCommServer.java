@@ -14,6 +14,7 @@ import java.net.SocketException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -94,7 +95,13 @@ public class SockCommServer {
 
             synchronized (this) {
                 for (ServerWorkerThread worker : workerThreadPool) {
-                    worker.interrupt();
+                    if (worker.isAlive()) {
+                        Log.d(TAG, "Interrupting thread: " + worker.getState());
+                        worker.interrupt();
+                    } else {
+                        Log.d(TAG, "Worker already dead: " + worker.getState());
+                    }
+
                 }
             }
         } catch (IOException e) {
@@ -125,8 +132,42 @@ class ServerWorkerThread extends Thread {
     private final String TAG = "SockCommServer_worker-" + Thread.currentThread().getId();
     private Socket clientSocket;
 
+    private GreeterGrpc.GreeterBlockingStub stub;
+    private ManagedChannel mChannel;
+
     public ServerWorkerThread(Socket clientSocket) {
         this.clientSocket = clientSocket;
+    }
+
+    private void connectToKBServer() {
+        mChannel = ManagedChannelBuilder
+                .forAddress(CommConstants.KB_IP, CommConstants.KB_PORT)
+                .usePlaintext(true)
+                .build();
+        stub = GreeterGrpc.newBlockingStub(mChannel);
+    }
+
+    private void closeConnectionToKBServer() {
+        try {
+            if (mChannel != null) {
+                Log.d(TAG, "Closing connection to KB Server");
+                mChannel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
+            } else {
+                Log.w(TAG, "Connection to KB server not started, nothing to close");
+            }
+        } catch (InterruptedException e) {
+            Log.e(TAG, "Exception while stopping connection to KBServer: " + e);
+        }
+    }
+
+    void test() {
+        try {
+            HelloRequest message = HelloRequest.newBuilder().setName("test123").setData("data").build();
+            HelloReply reply = stub.sayHello(message);
+            Log.d(TAG, "recv message: " + reply.getMessage());
+        } catch (Exception e) {
+            Log.e(TAG, "Exception: " + e);
+        }
     }
 
     private String fmt(String value) {
@@ -140,6 +181,8 @@ class ServerWorkerThread extends Thread {
         ObjectInputStream input = null;
         ObjectOutputStream output = null;
         try {
+
+            connectToKBServer();
 
             while (true) {
                 Log.d(TAG, "Reading message");
@@ -173,6 +216,7 @@ class ServerWorkerThread extends Thread {
 //            output.close();
         } catch (Exception e) {
             Log.d(TAG, "Exception in server worker thread: " + e);
+            closeConnectionToKBServer();
         }
 
         removeWorker(this);
@@ -186,26 +230,8 @@ class ServerWorkerThread extends Thread {
 
         }
 
-        void test() {
-            try {
-                String mHost = "192.168.0.105";
-                int mPort = 50051;
-                ManagedChannel mChannel = ManagedChannelBuilder.forAddress(mHost, mPort)
-                        .usePlaintext(true)
-                        .build();
-                GreeterGrpc.GreeterBlockingStub stub = GreeterGrpc.newBlockingStub(mChannel);
-                HelloRequest message = HelloRequest.newBuilder().setName("test123").build();
-                HelloReply reply = stub.sayHello(message);
-                Log.d(TAG, "recv message: " + reply.getMessage());
-            } catch (Exception e) {
-                Log.e(TAG, "Exception: " + e);
-            }
-        }
-
         @Override
         public void run() {
-            test();
-
             try {
                 while(true) {
                     Log.d(TAG, "Waiting for clients...");
@@ -225,6 +251,4 @@ class ServerWorkerThread extends Thread {
             }
         }
     }
-
-
 }
