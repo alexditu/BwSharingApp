@@ -30,8 +30,9 @@ import static research.bwsharingapp.account.PKIManager.generateKeys;
 public class AccountManagementActivity extends AppCompatActivity {
     private final static String TAG = "AccountManagementAct";
 
-    public final static String USERNAME_KEY = "USERNAME_KEY";
-    public final static String USER_REGISTERED_KEY = "USER_REGISTERED_KEY";
+    public final static String USERNAME_KEY         = "USERNAME_KEY";
+    public final static String USER_REGISTERED_KEY  = "USER_REGISTERED_KEY";
+    public final static String ACCOUNT_PREF_NAME    = "AccountManagementActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,14 +91,14 @@ public class AccountManagementActivity extends AppCompatActivity {
     private void saveUsername() {
         EditText usernameEt = (EditText) findViewById(R.id.username_et);
 
-        SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
+        SharedPreferences sharedPref = getSharedPreferences(ACCOUNT_PREF_NAME, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putString(USERNAME_KEY, usernameEt.getText().toString());
         editor.commit();
     }
 
     private void restoreUserState() {
-        SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
+        SharedPreferences sharedPref = getSharedPreferences(ACCOUNT_PREF_NAME, Context.MODE_PRIVATE);
         String username = sharedPref.getString(USERNAME_KEY, null);
 
         if (username == null) {

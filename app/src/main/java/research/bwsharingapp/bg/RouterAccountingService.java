@@ -24,21 +24,21 @@ public class RouterAccountingService extends AccountingService {
     private SockCommServer server;
 
     @Override
-    protected void startAccounting(ServiceInfo kb) {
+    protected void startAccounting(ServiceInfo kb, byte[] pubKeyEnc, byte[] privKeyEnc, String username) {
         this.kb = kb;
         Log.d(TAG, "startAccounting: " + kb);
         try {
-            startCommServer();
+            startCommServer(pubKeyEnc, privKeyEnc, username);
         } catch (Exception e) {
             Log.e(TAG, "UDP server exception: " + e);
         }
     }
 
-    private void startCommServer() throws UnknownHostException {
+    private void startCommServer(byte[] pubKeyEnc, byte[] privKeyEnc, String username) throws UnknownHostException {
         InetAddress ip  = InetAddress.getByName(kb.getRouterIp());
         int port        = Integer.parseInt(kb.getRouterPort());
 
-        server = new SockCommServer(ip, port);
+        server = new SockCommServer(ip, port, pubKeyEnc, privKeyEnc, username);
         Log.d(TAG, "Starting SockCommServer: " + server);
 
         if (server.start()) {

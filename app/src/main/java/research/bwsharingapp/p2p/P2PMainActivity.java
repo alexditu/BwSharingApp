@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
@@ -24,11 +25,15 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.net.InetAddress;
+import java.security.KeyPair;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
 import research.bwsharingapp.R;
+import research.bwsharingapp.account.PKIManager;
 import research.bwsharingapp.bg.ClientAccountingService;
 import research.bwsharingapp.bg.RouterAccountingService;
 import research.bwsharingapp.bg.pojo.ServiceInfo;
@@ -37,7 +42,12 @@ import research.bwsharingapp.sockcomm.CommConstants;
 import research.bwsharingapp.sockcomm.SockCommClient;
 import research.bwsharingapp.sockcomm.SockCommServer;
 
+import static research.bwsharingapp.account.AccountManagementActivity.ACCOUNT_PREF_NAME;
+import static research.bwsharingapp.account.AccountManagementActivity.USERNAME_KEY;
 import static research.bwsharingapp.bg.AccountingService.KB_INFO_TAG;
+import static research.bwsharingapp.bg.AccountingService.PRIV_KEY_TAG;
+import static research.bwsharingapp.bg.AccountingService.PUB_KEY_TAG;
+import static research.bwsharingapp.bg.AccountingService.USERNAME_TAG;
 
 /**
  * Created by alex on 1/17/17.
@@ -177,6 +187,12 @@ public class P2PMainActivity extends AppCompatActivity {
         unregisterReceiver(receiver);
     }
 
+    private String getClientUsername() {
+        SharedPreferences sharedPref = getSharedPreferences(ACCOUNT_PREF_NAME, Context.MODE_PRIVATE);
+        String username = sharedPref.getString(USERNAME_KEY, null);
+        return username;
+    }
+
     public void setOnClickListeners() {
         Button peerDiscoveryBtn = (Button) findViewById(R.id.peer_discovery_btn);
         peerDiscoveryBtn.setOnClickListener(new View.OnClickListener() {
@@ -227,8 +243,29 @@ public class P2PMainActivity extends AppCompatActivity {
                 if (!serverStared) {
                     Intent intent = new Intent(mainActivity, RouterAccountingService.class);
                     intent.putExtra(KB_INFO_TAG, new ServiceInfo(ROUTER_IP, CLIENT_IP, ROUTER_PORT));
-                    startService(intent);
-                    serverStared = true;
+
+                    try {
+                        PublicKey pubKey = PKIManager.getPublicKey(mainActivity.getApplicationContext());
+                        PrivateKey privKey = PKIManager.getPrivateKey(mainActivity.getApplicationContext());
+
+                        intent.putExtra(PUB_KEY_TAG, pubKey.getEncoded());
+                        intent.putExtra(PRIV_KEY_TAG, privKey.getEncoded());
+
+                        String username = getClientUsername();
+                        if (username == null) {
+                            Log.d(TAG, "User not registered! Server not started!");
+                            Toast.makeText(mainActivity, "Register user first!", Toast.LENGTH_LONG);
+                            return;
+                        } else {
+                            intent.putExtra(USERNAME_TAG, username);
+                        }
+
+                        startService(intent);
+                        serverStared = true;
+                    } catch (Exception e) {
+                        Log.d(TAG, "Failed to retrieve keyPair: " + e + ". Server not started!");
+                        Toast.makeText(mainActivity, "Server start failed!", Toast.LENGTH_LONG);
+                    }
                 } else {
                     Intent intent = new Intent(mainActivity, RouterAccountingService.class);
                     stopService(intent);
@@ -244,8 +281,29 @@ public class P2PMainActivity extends AppCompatActivity {
                 if (!clientStarted) {
                     Intent intent = new Intent(mainActivity, ClientAccountingService.class);
                     intent.putExtra(KB_INFO_TAG, new ServiceInfo(ROUTER_IP, CLIENT_IP, ROUTER_PORT));
-                    startService(intent);
-                    clientStarted = true;
+
+                    try {
+                        PublicKey pubKey = PKIManager.getPublicKey(mainActivity.getApplicationContext());
+                        PrivateKey privKey = PKIManager.getPrivateKey(mainActivity.getApplicationContext());
+
+                        intent.putExtra(PUB_KEY_TAG, pubKey.getEncoded());
+                        intent.putExtra(PRIV_KEY_TAG, privKey.getEncoded());
+
+                        String username = getClientUsername();
+                        if (username == null) {
+                            Log.d(TAG, "User not registered! Server not started!");
+                            Toast.makeText(mainActivity, "Register user first!", Toast.LENGTH_LONG);
+                            return;
+                        } else {
+                            intent.putExtra(USERNAME_TAG, username);
+                        }
+
+                        startService(intent);
+                        clientStarted = true;
+                    } catch (Exception e) {
+                        Log.d(TAG, "Failed to retrieve keyPair: " + e + ". Server not started!");
+                        Toast.makeText(mainActivity, "Server start failed!", Toast.LENGTH_LONG);
+                    }
                 } else {
                     Intent intent = new Intent(mainActivity, ClientAccountingService.class);
                     stopService(intent);
@@ -440,64 +498,64 @@ public class P2PMainActivity extends AppCompatActivity {
 
 
     public static final String ROUTER_PORT  = "8080";
-    class ServerAction implements View.OnClickListener {
+//    class ServerAction implements View.OnClickListener {
+//
+//
+//        @Override
+//        public void onClick(View v) {
+//            Thread t = new Thread(new Runnable() {
+//                @Override
+//                public void run() {
+//                    boolean ret;
+//
+//                    if (!serverStared) {
+//                        server = new SockCommServer(deviceInfo.getIpAddr(), CommConstants.COMM_PORT);
+//                        Log.d(TAG, "Starting SockCommServer: " + server);
+//                        ret = server.start();
+//                        if (ret == true) {
+//                            Log.d(TAG, "Starting SockCommServer succeeded!");
+//                            serverStared = true;
+//                        } else {
+//                            Log.d(TAG, "Starting SockCommServer failed!");
+//                        }
+//                    } else {
+//                        Log.d(TAG, "Stopping SockCommServer: " + server);
+//                        ret = server.stop();
+//                        if (ret == true) {
+//                            Log.d(TAG, "Stopping SockCommServer succeeded!");
+//                            serverStared = false;
+//                        } else {
+//                            Log.d(TAG, "Stopping SockCommServer failed!");
+//                        }
+//                    }
+//                }
+//            });
+//            t.start();
+//        }
+//    }
 
-
-        @Override
-        public void onClick(View v) {
-            Thread t = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    boolean ret;
-
-                    if (!serverStared) {
-                        server = new SockCommServer(deviceInfo.getIpAddr(), CommConstants.COMM_PORT);
-                        Log.d(TAG, "Starting SockCommServer: " + server);
-                        ret = server.start();
-                        if (ret == true) {
-                            Log.d(TAG, "Starting SockCommServer succeeded!");
-                            serverStared = true;
-                        } else {
-                            Log.d(TAG, "Starting SockCommServer failed!");
-                        }
-                    } else {
-                        Log.d(TAG, "Stopping SockCommServer: " + server);
-                        ret = server.stop();
-                        if (ret == true) {
-                            Log.d(TAG, "Stopping SockCommServer succeeded!");
-                            serverStared = false;
-                        } else {
-                            Log.d(TAG, "Stopping SockCommServer failed!");
-                        }
-                    }
-                }
-            });
-            t.start();
-        }
-    }
-
-    class ClientAction implements View.OnClickListener {
-        @Override
-        public void onClick(View v) {
-            Thread t = new Thread(new Runnable() {
-                @Override
-                public void run() {
-
-                    if (!clientStarted) {
-                        client = new SockCommClient(deviceInfo.getGroupOwnerAddress(), CommConstants.COMM_PORT);
-                        boolean connected = client.connect();
-
-                        if (connected) {
-                            client.sendInitMsg();
-                        }
-                        clientStarted = true;
-                    } else {
-                        client.disconnect();
-                        clientStarted = false;
-                    }
-                }
-            });
-            t.start();
-        }
-    }
+//    class ClientAction implements View.OnClickListener {
+//        @Override
+//        public void onClick(View v) {
+//            Thread t = new Thread(new Runnable() {
+//                @Override
+//                public void run() {
+//
+//                    if (!clientStarted) {
+//                        client = new SockCommClient(deviceInfo.getGroupOwnerAddress(), CommConstants.COMM_PORT);
+//                        boolean connected = client.connect();
+//
+//                        if (connected) {
+//                            client.sendInitMsg();
+//                        }
+//                        clientStarted = true;
+//                    } else {
+//                        client.disconnect();
+//                        clientStarted = false;
+//                    }
+//                }
+//            });
+//            t.start();
+//        }
+//    }
 }

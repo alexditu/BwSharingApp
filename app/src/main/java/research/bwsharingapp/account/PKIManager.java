@@ -16,6 +16,7 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 
 /**
@@ -66,21 +67,13 @@ public class PKIManager {
         return pair;
     }
 
-    //TODO: remove this
-//    public static KeyPair getKeys(Context ctx) throws NoSuchAlgorithmException, IOException, InvalidKeySpecException {
-//        KeyPair keyPair = null;
-//        File f = new File(PRIV_FILENAME);
-//        if (f.exists()) {
-//            /* key pair already exists no need to generate them */
-//            PrivateKey privKey = getPrivateKey(ctx);
-//            PublicKey pubKey = getPublicKey(ctx);
-//            keyPair = new KeyPair(pubKey, privKey);
-//        } else {
-//            /* need to generate keys */
-//            keyPair = generateKeys(ctx);
-//        }
-//        return keyPair;
-//    }
+    public static KeyPair getKeys(Context ctx) throws NoSuchAlgorithmException, IOException, InvalidKeySpecException {
+        KeyPair keyPair = null;
+        PrivateKey privKey = getPrivateKey(ctx);
+        PublicKey pubKey = getPublicKey(ctx);
+        keyPair = new KeyPair(pubKey, privKey);
+        return keyPair;
+    }
 
 
     /******************** Internal private methods ************************************************/
@@ -93,9 +86,10 @@ public class PKIManager {
     }
 
     private static PrivateKey convertPrivateKeyBytes(byte[] encKey) throws NoSuchAlgorithmException, InvalidKeySpecException {
-        X509EncodedKeySpec pubKeySpec = new X509EncodedKeySpec(encKey);
+        //X509EncodedKeySpec pubKeySpec = new X509EncodedKeySpec(encKey);
+        PKCS8EncodedKeySpec privKeySpec = new PKCS8EncodedKeySpec(encKey);
         KeyFactory keyFactory = KeyFactory.getInstance(ALG_NAME);
-        PrivateKey privKey = keyFactory.generatePrivate(pubKeySpec);
+        PrivateKey privKey = keyFactory.generatePrivate(privKeySpec);
         return privKey;
     }
 

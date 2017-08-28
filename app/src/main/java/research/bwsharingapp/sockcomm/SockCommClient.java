@@ -7,6 +7,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.util.Arrays;
 
 import research.bwsharingapp.iou.IOU_1;
 import research.bwsharingapp.iptables.IPTablesManager;
@@ -29,11 +30,19 @@ public class SockCommClient {
 
     private boolean stop = false;
 
-    public SockCommClient(InetAddress ipAddr, int port) {
+    byte[] pubKeyEnc;
+    byte[] privKeyEnc;
+    String username;
+
+    public SockCommClient(InetAddress ipAddr, int port, byte[] pubKeyEnc, byte[] privKeyEnc, String username) {
         Log.d(TAG, "SockCommClient: " + ipAddr.getHostAddress() + ":" + port);
         this.port = port;
         this.ipAddr = ipAddr;
         sock = null;
+
+        this.pubKeyEnc  = Arrays.copyOf(pubKeyEnc, pubKeyEnc.length);
+        this.privKeyEnc = Arrays.copyOf(privKeyEnc, privKeyEnc.length);
+        this.username = username;
     }
 
     public boolean connect() {
@@ -49,8 +58,10 @@ public class SockCommClient {
         return connected;
     }
 
-    public void sendInitMsg() {
-        SockCommMsg<Void> msg = new SockCommMsg<>(MsgType.HELLO, null);
+    public Integer sendInitMsg() {
+        ClientInfo clientInfo = new ClientInfo(username, pubKeyEnc);
+        SockCommMsg<ClientInfo> msg = new SockCommMsg<>(MsgType.HELLO, clientInfo);
+
         try {
             Log.d(TAG, "Sending init msg: " + msg);
             output = new ObjectOutputStream(sock.getOutputStream());
@@ -59,8 +70,10 @@ public class SockCommClient {
 
             Log.d(TAG, "Msg sent. Reading reply");
             input = new ObjectInputStream(sock.getInputStream());
-            SockCommMsg<String> reply = (SockCommMsg<String>)input.readObject();
+            SockCommMsg<Integer> reply = (SockCommMsg<Integer>)input.readObject();
             Log.d(TAG, "Recv reply: " + reply);
+
+            return reply.getData();
 
         } catch (IOException e) {
             Log.e(TAG, "sendInitMsg failed: " + e);
@@ -69,10 +82,21 @@ public class SockCommClient {
             Log.e(TAG, "sendInitMsg failed: " + e);
             e.printStackTrace();
         }
+        return -1;
     }
 
     public void sendIou() {
         int exceptionCount = 0;
+
+        /* handshake */
+        int status = sendInitMsg();
+        if (status != 0) {
+            Log.e(TAG, "Handshake error, exiting...");
+            disconnect();
+        }
+
+        Log.d(TAG, "Handshake succeeded!");
+
         while (!stop) {
             try {
                 TrafficInfo in = IPTablesManager.getInputStats(CLIENT_ID);

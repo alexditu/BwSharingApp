@@ -10,6 +10,7 @@ import android.widget.Toast;
 
 import research.bwsharingapp.R;
 
+import static research.bwsharingapp.account.AccountManagementActivity.ACCOUNT_PREF_NAME;
 import static research.bwsharingapp.account.AccountManagementActivity.USER_REGISTERED_KEY;
 
 /**
@@ -37,7 +38,7 @@ public class RegisterUserTask extends AsyncTask<Activity, Void, Integer> {
             Button btn = (Button) activity.findViewById(R.id.register_user_btn);
             btn.setEnabled(false);
 
-            SharedPreferences sharedPref = activity.getPreferences(Context.MODE_PRIVATE);
+            SharedPreferences sharedPref = activity.getSharedPreferences(ACCOUNT_PREF_NAME, Context.MODE_PRIVATE);
             SharedPreferences.Editor editor = sharedPref.edit();
             editor.putBoolean(USER_REGISTERED_KEY, true);
             editor.commit();

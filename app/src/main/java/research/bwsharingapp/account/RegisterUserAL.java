@@ -22,6 +22,7 @@ import research.bwsharingapp.proto.kb.RegisterUserReply;
 import research.bwsharingapp.proto.kb.UserData;
 import research.bwsharingapp.sockcomm.CommConstants;
 
+import static research.bwsharingapp.account.AccountManagementActivity.ACCOUNT_PREF_NAME;
 import static research.bwsharingapp.account.AccountManagementActivity.USERNAME_KEY;
 
 
@@ -99,7 +100,7 @@ public class RegisterUserAL {
     }
 
     private String getUsername() {
-        SharedPreferences sharedPref = activity.getPreferences(Context.MODE_PRIVATE);
+        SharedPreferences sharedPref = activity.getSharedPreferences(ACCOUNT_PREF_NAME, Context.MODE_PRIVATE);
         String username = sharedPref.getString(USERNAME_KEY, null);
         return username;
     }

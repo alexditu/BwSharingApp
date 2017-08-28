@@ -13,13 +13,16 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import research.bwsharingapp.iou.IOU_1;
+import research.bwsharingapp.iptables.ExecFailedException;
 import research.bwsharingapp.iptables.IPTablesManager;
+import research.bwsharingapp.iptables.IPTablesParserException;
 import research.bwsharingapp.proto.kb.ClientIOU;
 import research.bwsharingapp.proto.kb.KibbutzGrpc;
 import research.bwsharingapp.proto.kb.RouterIOU;
@@ -43,13 +46,19 @@ public class SockCommServer {
     private ServerMainThread serverMainThread;
     private List<ServerWorkerThread> workerThreadPool;
 
-    public SockCommServer(InetAddress ipAddr, int port) {
-        this.port           = port;
-        this.ipAddr         = ipAddr;
-        this.serverSocket   = null;
-        this.serverMainThread = null;
+    private byte[] pubKeyEnc;
+    private byte[] privKeyEnc;
+    private String username;
 
-        workerThreadPool = new ArrayList<>(MAX_CLIENT_CONN);
+    public SockCommServer(InetAddress ipAddr, int port, byte[] pubKeyEnc, byte[] privKeyEnc, String username) {
+        this.port               = port;
+        this.ipAddr             = ipAddr;
+        this.serverSocket       = null;
+        this.serverMainThread   = null;
+        this.pubKeyEnc          = Arrays.copyOf(pubKeyEnc, pubKeyEnc.length);
+        this.privKeyEnc         = Arrays.copyOf(privKeyEnc, privKeyEnc.length);
+        this.username           = username;
+        workerThreadPool        = new ArrayList<>(MAX_CLIENT_CONN);
     }
 
     public synchronized void addWorker(ServerWorkerThread worker) {
@@ -84,7 +93,7 @@ public class SockCommServer {
             return false;
         }
 
-        serverMainThread = new ServerMainThread();
+        serverMainThread = new ServerMainThread(pubKeyEnc, privKeyEnc, username);
         serverMainThread.start();
 
         return true;
@@ -136,8 +145,15 @@ class ServerWorkerThread extends Thread {
     private ManagedChannel mChannel;
     private KibbutzGrpc.KibbutzBlockingStub stub;
 
-    public ServerWorkerThread(Socket clientSocket) {
+    private byte[] pubKeyEnc;
+    private byte[] privKeyEnc;
+    private String username;
+
+    public ServerWorkerThread(Socket clientSocket, byte[] pubKeyEnc, byte[] privKeyEnc, String username) {
         this.clientSocket = clientSocket;
+        this.pubKeyEnc  = Arrays.copyOf(pubKeyEnc, pubKeyEnc.length);
+        this.privKeyEnc = Arrays.copyOf(privKeyEnc, privKeyEnc.length);
+        this.username   = username;
     }
 
     private void connectToKBServer() {
@@ -217,24 +233,18 @@ class ServerWorkerThread extends Thread {
                 Object ob = input.readObject();
 
 
-                SockCommMsg<Object> test = (SockCommMsg<Object>) ob;
-                Log.d(TAG, "Recv msg type: " + test.getType());
+                SockCommMsg<Object> genericMsg = (SockCommMsg<Object>) ob;
+                Log.d(TAG, "Recv msg type: " + genericMsg.getType());
+                if (genericMsg.getType() == MsgType.HELLO) {
+                    processHelloMsg((SockCommMsg<ClientInfo>) ob);
+                } else if (genericMsg.getType() == MsgType.IOU_1) {
+                    processClientIOU((SockCommMsg<IOU_1>) ob);
+                } else {
+                    Log.d(TAG, "Unknown message type: " + genericMsg.getType());
+                }
 
 
-                SockCommMsg<IOU_1> request = (SockCommMsg<IOU_1>) ob;
-//                Log.d(TAG, "Message read: " + request);
 
-                TrafficInfo fw[] = IPTablesManager.getFwStats(CLIENT_ID);
-                Log.d(TAG, "client stats bytes: " +
-                        fmt(request.getData().getInput().getBytes() + "") + "\t\t" +
-                        fmt(request.getData().getOutput().getBytes() + ""));
-                Log.d(TAG, "router stats bytes: " +
-                        fmt(fw[0].getBytes() + "") + "\t\t" +
-                        fmt(fw[1].getBytes() + ""));
-
-
-                ClientIOU clientIou = convert(request.getData());
-                sendRouterIou(clientIou, fw);
             }
 
 
@@ -258,13 +268,44 @@ class ServerWorkerThread extends Thread {
 
         removeWorker(this);
     }
+
+    private void processHelloMsg(SockCommMsg<ClientInfo> request) throws IOException {
+        Log.d(TAG, "Recv HELLO from client: " + request.getData().getUsername());
+
+        Log.d(TAG, "Sending reply");
+        ObjectOutputStream output = new ObjectOutputStream(clientSocket.getOutputStream());
+        SockCommMsg<Integer> reply = new SockCommMsg<>(MsgType.HELLO_REPLY, 0);
+        output.writeObject(reply);
+        output.flush();
+    }
+
+    private void processClientIOU(SockCommMsg<IOU_1> request) throws ExecFailedException, IOException, IPTablesParserException {
+
+        TrafficInfo fw[] = IPTablesManager.getFwStats(CLIENT_ID);
+        Log.d(TAG, "client stats bytes: " +
+                fmt(request.getData().getInput().getBytes() + "") + "\t\t" +
+                fmt(request.getData().getOutput().getBytes() + ""));
+        Log.d(TAG, "router stats bytes: " +
+                fmt(fw[0].getBytes() + "") + "\t\t" +
+                fmt(fw[1].getBytes() + ""));
+
+
+        ClientIOU clientIou = convert(request.getData());
+        sendRouterIou(clientIou, fw);
+    }
 }
 
     class ServerMainThread extends Thread {
         private final String TAG = "SockCommServer_main";
 
-        public ServerMainThread() {
+        private byte[] pubKeyEnc;
+        private byte[] privKeyEnc;
+        private String username;
 
+        public ServerMainThread(byte[] pubKeyEnc, byte[] privKeyEnc, String username) {
+            this.pubKeyEnc  = Arrays.copyOf(pubKeyEnc, pubKeyEnc.length);
+            this.privKeyEnc = Arrays.copyOf(privKeyEnc, privKeyEnc.length);
+            this.username   = username;
         }
 
         @Override
@@ -277,7 +318,8 @@ class ServerWorkerThread extends Thread {
                     clientSock = serverSocket.accept();
                     Log.d(TAG, "Client connected: " + clientSock.getInetAddress().getHostAddress());
 
-                    ServerWorkerThread th = new ServerWorkerThread(clientSock);
+                    ServerWorkerThread th =
+                            new ServerWorkerThread(clientSock, pubKeyEnc, privKeyEnc, username);
                     th.start();
                     addWorker(th);
                 }

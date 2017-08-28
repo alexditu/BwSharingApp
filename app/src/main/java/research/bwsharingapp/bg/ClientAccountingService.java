@@ -26,12 +26,12 @@ public class ClientAccountingService extends AccountingService {
     private SockCommClient client;
 
     @Override
-    protected void startAccounting(ServiceInfo kb) {
+    protected void startAccounting(ServiceInfo kb, byte[] pubKeyEnc, byte[] privKeyEnc, String username) {
         Log.d(TAG, "startAccounting: " + kb);
         this.kb = kb;
 
         try {
-            startCommClient();
+            startCommClient(pubKeyEnc, privKeyEnc, username);
         } catch (Exception e) {
             Log.d(TAG, "sendData exception: " + e);
         }
@@ -39,11 +39,11 @@ public class ClientAccountingService extends AccountingService {
 
 
 
-    private void startCommClient() throws UnknownHostException {
+    private void startCommClient(byte[] pubKeyEnc, byte[] privKeyEnc, String username) throws UnknownHostException {
         InetAddress ip  = InetAddress.getByName(kb.getRouterIp());
         int port        = Integer.parseInt(kb.getRouterPort());
 
-        client = new SockCommClient(ip, port);
+        client = new SockCommClient(ip, port, pubKeyEnc, privKeyEnc, username);
         boolean connected = client.connect();
 
         if (connected) {

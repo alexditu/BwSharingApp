@@ -6,6 +6,7 @@ package research.bwsharingapp.sockcomm;
 
 public enum MsgType {
     HELLO(0),
+    HELLO_REPLY(3),
     IOU_1(1),
     IOU_2(2),
 
