@@ -3,6 +3,7 @@ package research.bwsharingapp.account;
 import android.content.Context;
 import android.util.Log;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -32,18 +33,28 @@ public class PKIManager {
     private final static int INIT_LEN           = 2048;
 
     public static PublicKey getPublicKey(Context ctx) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
+        Log.d(TAG, "Retrieving public key");
+
         byte[] encKey = getKeyBytesFromFile(PUB_FILENAME, ctx);
         PublicKey pubKey = convertPublicKeyBytes(encKey);
+
+        Log.d(TAG, "Public key retrieved successfuly");
         return pubKey;
     }
 
     public static PrivateKey getPrivateKey(Context ctx) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
+        Log.d(TAG, "Retrieving private key");
+
         byte[] encKey = getKeyBytesFromFile(PRIV_FILENAME, ctx);
         PrivateKey privKey = convertPrivateKeyBytes(encKey);
+
+        Log.d(TAG, "Private key retrieved successfuly");
         return privKey;
     }
 
     public static KeyPair generateKeys(Context ctx) throws NoSuchAlgorithmException, IOException {
+        Log.d(TAG, "Generating key pairs");
+
         KeyPairGenerator keyGen = KeyPairGenerator.getInstance(ALG_NAME);
         SecureRandom random = SecureRandom.getInstance(RAND_ALG);
         keyGen.initialize(INIT_LEN, random);
@@ -51,8 +62,25 @@ public class PKIManager {
 
         saveKeysToFile(pair, ctx);
 
+        Log.d(TAG, "Key pairs generated successfuly");
         return pair;
     }
+
+    //TODO: remove this
+//    public static KeyPair getKeys(Context ctx) throws NoSuchAlgorithmException, IOException, InvalidKeySpecException {
+//        KeyPair keyPair = null;
+//        File f = new File(PRIV_FILENAME);
+//        if (f.exists()) {
+//            /* key pair already exists no need to generate them */
+//            PrivateKey privKey = getPrivateKey(ctx);
+//            PublicKey pubKey = getPublicKey(ctx);
+//            keyPair = new KeyPair(pubKey, privKey);
+//        } else {
+//            /* need to generate keys */
+//            keyPair = generateKeys(ctx);
+//        }
+//        return keyPair;
+//    }
 
 
     /******************** Internal private methods ************************************************/

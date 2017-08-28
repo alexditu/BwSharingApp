@@ -215,6 +215,12 @@ class ServerWorkerThread extends Thread {
                 Log.d(TAG, "Reading message");
                 input = new ObjectInputStream(clientSocket.getInputStream());
                 Object ob = input.readObject();
+
+
+                SockCommMsg<Object> test = (SockCommMsg<Object>) ob;
+                Log.d(TAG, "Recv msg type: " + test.getType());
+
+
                 SockCommMsg<IOU_1> request = (SockCommMsg<IOU_1>) ob;
 //                Log.d(TAG, "Message read: " + request);
 

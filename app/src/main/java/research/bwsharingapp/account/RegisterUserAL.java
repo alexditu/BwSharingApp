@@ -1,6 +1,8 @@
 package research.bwsharingapp.account;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.provider.Settings;
 import android.util.Log;
 import android.widget.Toast;
@@ -20,7 +22,8 @@ import research.bwsharingapp.proto.kb.RegisterUserReply;
 import research.bwsharingapp.proto.kb.UserData;
 import research.bwsharingapp.sockcomm.CommConstants;
 
-import static java.security.AccessController.getContext;
+import static research.bwsharingapp.account.AccountManagementActivity.USERNAME_KEY;
+
 
 /**
  * Created by alex on 8/28/17.
@@ -33,36 +36,41 @@ public class RegisterUserAL {
     private KibbutzGrpc.KibbutzBlockingStub stub;
 
     private Context ctx;
+    private Activity activity;
 
-    public RegisterUserAL(Context ctx) {
-        this.ctx = ctx;
+    public RegisterUserAL(Activity activity) {
+        this.activity = activity;
+        this.ctx = activity.getApplicationContext();
     }
 
     public int registerUser() {
-        KeyPair keyPair = null;
+        PublicKey pubKey = null;
         try {
-            keyPair = PKIManager.generateKeys(ctx);
+            pubKey = PKIManager.getPublicKey(ctx);
         } catch (Exception e) {
-            Log.d(TAG, "KeyPair generation failed: " + e + ". Retry!");
+            Log.d(TAG, "KeyPair could not be retrieved: " + e + ". Retry!");
             e.printStackTrace();
-//            Toast.makeText(ctx, "KeyPair generation failed: " + e, Toast.LENGTH_LONG);
             return -100;
         }
 
-        connectToKBServer();
-        RegisterUserReply reply = registerUser(keyPair.getPublic());
 
-        int statusCode = reply.getStatusCode();
-        if (statusCode == 0) {
-//
-            Log.d(TAG, "User registered successfuly");
-        } else {
-//            Toast.makeText(ctx, "User registration failed with code: " + statusCode, Toast.LENGTH_LONG);
-            Log.d(TAG, "User registration failed with code: " + statusCode);
+        try {
+            connectToKBServer();
+            RegisterUserReply reply = registerUser(pubKey);
+
+            int statusCode = reply.getStatusCode();
+            if (statusCode == 0) {
+                Log.d(TAG, "User registered successfuly");
+            } else {
+                Log.d(TAG, "User registration failed with code: " + statusCode);
+            }
+            return statusCode;
+        } catch(Exception e) {
+            Log.e(TAG, "grpc call registerUser failed: " + e);
+            return -100;
+        } finally {
+            disconnectFromKBServer();
         }
-
-        disconnectFromKBServer();
-        return statusCode;
     }
 
     private RegisterUserReply registerUser(PublicKey keyPub) {
@@ -91,8 +99,9 @@ public class RegisterUserAL {
     }
 
     private String getUsername() {
-        //TODO: should read this info from somewhere
-        return "some user name";
+        SharedPreferences sharedPref = activity.getPreferences(Context.MODE_PRIVATE);
+        String username = sharedPref.getString(USERNAME_KEY, null);
+        return username;
     }
 
     private String getDeviceId() {
