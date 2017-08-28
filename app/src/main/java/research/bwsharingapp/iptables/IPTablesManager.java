@@ -10,6 +10,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.ArrayList;
 
+import research.bwsharingapp.proto.kb.TrafficInfo;
+
 /**
  * Created by alex on 5/20/17.
  */
@@ -68,6 +70,16 @@ public class IPTablesManager {
 
 
     public static TrafficInfo[] getFwStats(String id) throws IOException, ExecFailedException, IPTablesParserException {
+        String cmd = String.format(R_GET_FW_STATS, id);
+        ArrayList<String> output = execCmdAndReadOutput(cmd);
+
+        TrafficInfo inbound     = IPTablesParser.parseFwInbound(output, id);
+        TrafficInfo outbound    = IPTablesParser.parseFwOutbound(output, id);
+        TrafficInfo result[]    = {inbound, outbound};
+        return result;
+    }
+
+    public static TrafficInfo[] getFwStats2(String id) throws IOException, ExecFailedException, IPTablesParserException {
         String cmd = String.format(R_GET_FW_STATS, id);
         ArrayList<String> output = execCmdAndReadOutput(cmd);
 

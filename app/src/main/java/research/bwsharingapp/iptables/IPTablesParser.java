@@ -4,6 +4,8 @@ import android.util.Log;
 
 import java.util.ArrayList;
 
+import research.bwsharingapp.proto.kb.TrafficInfo;
+
 /**
  * Created by alex on 5/21/17.
  */
@@ -66,11 +68,12 @@ public class IPTablesParser {
             throw new IPTablesParserException(err, -2);
         }
 
-        info        = new TrafficInfo();
-        info.pkts   = parts[1];
-        info.bytes  = parts[2];
-        info.src    = parts[8];
-        info.dst    = parts[9];
+        TrafficInfo.Builder builder = TrafficInfo.newBuilder();
+        builder.setPkts(Long.parseLong(parts[1]));
+        builder.setBytes(Long.parseLong(parts[2]));
+        builder.setSrc(parts[8]);
+        builder.setDst(parts[9]);
+        info = builder.build();
 
         return info;
     }

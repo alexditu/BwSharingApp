@@ -9,10 +9,8 @@ import java.net.InetAddress;
 import java.net.Socket;
 
 import research.bwsharingapp.iou.IOU_1;
-import research.bwsharingapp.iptables.ExecFailedException;
 import research.bwsharingapp.iptables.IPTablesManager;
-import research.bwsharingapp.iptables.IPTablesParserException;
-import research.bwsharingapp.iptables.TrafficInfo;
+import research.bwsharingapp.proto.kb.TrafficInfo;
 
 import static research.bwsharingapp.MainActivity.CLIENT_ID;
 

@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "research.bwsharingapp.proto.kb";
+option java_outer_classname = "KibbutzProto";
+option objc_class_prefix = "HLW";
+
+package kibbutz;
+
+// The greeting service definition.
+service Kibbutz {
+    // Sends a greeting
+    rpc sendRouterIOU (RouterIOU) returns (RouterIOUReply) {}
+}
+
+message TrafficInfo {
+    int64 pkts      = 1;
+    int64 bytes     = 2;
+    string src      = 3;
+    string dst      = 4;
+}
+
+message ClientIOU {
+    TrafficInfo in  = 1;
+    TrafficInfo out = 2;
+    string client   = 3;
+    string server   = 4;
+    string sign     = 5;
+}
+
+message RouterIOU {
+    TrafficInfo in      = 1;
+    TrafficInfo out     = 2;
+    string sign         = 3;
+    ClientIOU clientIou = 4;
+}
+
+message RouterIOUReply {
+    bool isValid        = 1;
+    int32 statusCode    = 2;
+}

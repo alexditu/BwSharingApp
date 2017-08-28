@@ -20,10 +20,11 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import research.bwsharingapp.iou.IOU_1;
 import research.bwsharingapp.iptables.IPTablesManager;
-import research.bwsharingapp.iptables.TrafficInfo;
-import research.bwsharingapp.proto.helloworld.GreeterGrpc;
-import research.bwsharingapp.proto.helloworld.HelloReply;
-import research.bwsharingapp.proto.helloworld.HelloRequest;
+import research.bwsharingapp.proto.kb.ClientIOU;
+import research.bwsharingapp.proto.kb.KibbutzGrpc;
+import research.bwsharingapp.proto.kb.RouterIOU;
+import research.bwsharingapp.proto.kb.RouterIOUReply;
+import research.bwsharingapp.proto.kb.TrafficInfo;
 
 import static research.bwsharingapp.MainActivity.CLIENT_ID;
 
@@ -132,8 +133,8 @@ class ServerWorkerThread extends Thread {
     private final String TAG = "SockCommServer_worker-" + Thread.currentThread().getId();
     private Socket clientSocket;
 
-    private GreeterGrpc.GreeterBlockingStub stub;
     private ManagedChannel mChannel;
+    private KibbutzGrpc.KibbutzBlockingStub stub;
 
     public ServerWorkerThread(Socket clientSocket) {
         this.clientSocket = clientSocket;
@@ -144,7 +145,7 @@ class ServerWorkerThread extends Thread {
                 .forAddress(CommConstants.KB_IP, CommConstants.KB_PORT)
                 .usePlaintext(true)
                 .build();
-        stub = GreeterGrpc.newBlockingStub(mChannel);
+        stub = KibbutzGrpc.newBlockingStub(mChannel);
     }
 
     private void closeConnectionToKBServer() {
@@ -160,13 +161,18 @@ class ServerWorkerThread extends Thread {
         }
     }
 
-    void test() {
+    void sendRouterIou(ClientIOU clientIou, TrafficInfo fw[]) {
         try {
-            HelloRequest message = HelloRequest.newBuilder().setName("test123").setData("data").build();
-            HelloReply reply = stub.sayHello(message);
-            Log.d(TAG, "recv message: " + reply.getMessage());
+            RouterIOU.Builder routerIouBuilder = RouterIOU.newBuilder();
+            routerIouBuilder.setClientIou(clientIou);
+            routerIouBuilder.setIn(fw[0]);
+            routerIouBuilder.setOut(fw[1]);
+
+            RouterIOU routerIou = routerIouBuilder.build();
+            RouterIOUReply reply = stub.sendRouterIOU(routerIou);
+            Log.d(TAG, "recv message: " + reply);
         } catch (Exception e) {
-            Log.e(TAG, "Exception: " + e);
+            Log.e(TAG, "Exception while sending routerIOU: " + e);
         }
     }
 
@@ -174,6 +180,27 @@ class ServerWorkerThread extends Thread {
         DecimalFormat myFormatter = new DecimalFormat("###,###.###");
         String output = myFormatter.format(Double.parseDouble(value));
         return output;
+    }
+
+    // TODO: should be replaced when communication between client and router is done via grpc
+    private ClientIOU convert(IOU_1 iou) {
+        ClientIOU.Builder builder = ClientIOU.newBuilder();
+
+        TrafficInfo.Builder bIn = TrafficInfo.newBuilder();
+        bIn.setBytes(iou.getInput().getBytes());
+        bIn.setPkts(iou.getInput().getPkts());
+        bIn.setSrc(iou.getInput().getSrc());
+        bIn.setDst(iou.getInput().getDst());
+
+        TrafficInfo.Builder bOut = TrafficInfo.newBuilder();
+        bOut.setBytes(iou.getOutput().getBytes());
+        bOut.setPkts(iou.getOutput().getPkts());
+        bOut.setSrc(iou.getOutput().getSrc());
+        bOut.setDst(iou.getOutput().getDst());
+
+        builder.setIn(bIn.build());
+        builder.setOut(bOut.build());
+        return builder.build();
     }
 
     @Override
@@ -193,11 +220,15 @@ class ServerWorkerThread extends Thread {
 
                 TrafficInfo fw[] = IPTablesManager.getFwStats(CLIENT_ID);
                 Log.d(TAG, "client stats bytes: " +
-                        fmt(request.getData().getInput().bytes) + "\t\t" +
-                        fmt(request.getData().getOutput().bytes));
+                        fmt(request.getData().getInput().getBytes() + "") + "\t\t" +
+                        fmt(request.getData().getOutput().getBytes() + ""));
                 Log.d(TAG, "router stats bytes: " +
-                        fmt(fw[0].bytes) + "\t\t" +
-                        fmt(fw[1].bytes));
+                        fmt(fw[0].getBytes() + "") + "\t\t" +
+                        fmt(fw[1].getBytes() + ""));
+
+
+                ClientIOU clientIou = convert(request.getData());
+                sendRouterIou(clientIou, fw);
             }
 
 
