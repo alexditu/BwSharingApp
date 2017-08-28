@@ -32,4 +32,12 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/wifi_p2p_btn"
         />
+
+    <Button
+        android:id="@+id/account_act_btn"
+        android:text="Account Manager"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/iptables_act_btn"
+        />
 </RelativeLayout>

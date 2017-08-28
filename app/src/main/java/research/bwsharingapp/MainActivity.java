@@ -11,6 +11,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
+import research.bwsharingapp.account.AccountManagementActivity;
 import research.bwsharingapp.iptables.IPTablesManagerActivity;
 import research.bwsharingapp.p2p.P2PMainActivity;
 import research.bwsharingapp.p2p.P2PReceiver;
@@ -61,6 +62,15 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 startActivity(iptables);
+            }
+        });
+
+        Button startAccountAct = (Button) findViewById(R.id.account_act_btn);
+        final Intent account = new Intent(this, AccountManagementActivity.class);
+        startAccountAct.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startActivity(account);
             }
         });
     }

@@ -24,14 +24,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".p2p.P2PMainActivity"></activity>
+        <activity android:name=".p2p.P2PMainActivity" />
 
         <service
             android:name=".bg.ClientAccountingService"
-            android:enabled="true"></service>
+            android:enabled="true" />
         <service
             android:name=".bg.RouterAccountingService"
-            android:enabled="true"></service>
+            android:enabled="true" />
 
         <receiver
             android:name=".ClientConnectedReceiver"
@@ -42,7 +42,8 @@
             </intent-filter>
         </receiver>
 
-        <activity android:name=".iptables.IPTablesManagerActivity"></activity>
+        <activity android:name=".iptables.IPTablesManagerActivity" />
+        <activity android:name=".account.AccountManagementActivity"></activity>
     </application>
 
 </manifest>

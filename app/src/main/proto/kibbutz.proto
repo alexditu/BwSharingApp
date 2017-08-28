@@ -11,6 +11,18 @@ package kibbutz;
 service Kibbutz {
     // Sends a greeting
     rpc sendRouterIOU (RouterIOU) returns (RouterIOUReply) {}
+    rpc registerUser (UserData) returns (RegisterUserReply) {}
+}
+
+message UserData {
+    string username = 1;
+    string deviceId = 2;
+    bytes pubKey    = 3;
+}
+
+message RegisterUserReply {
+    bool status         = 1;
+    int32 statusCode    = 2;
 }
 
 message TrafficInfo {
