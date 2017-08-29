@@ -3,11 +3,11 @@ package research.bwsharingapp.account;
 import android.content.Context;
 import android.util.Log;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.security.InvalidKeyException;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -15,6 +15,8 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.Signature;
+import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
@@ -29,8 +31,9 @@ public class PKIManager {
     private final static String PRIV_FILENAME   = "key.priv";
 
 
-    private final static String ALG_NAME        = "RSA";
+    private final static String PKI_ALG_NAME    = "RSA";
     private final static String RAND_ALG        = "SHA1PRNG";
+    private final static String SIGN_ALG_NAME   = "SHA1withRSA";
     private final static int INIT_LEN           = 2048;
 
     public static PublicKey getPublicKey(Context ctx) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
@@ -56,8 +59,12 @@ public class PKIManager {
     public static KeyPair generateKeys(Context ctx) throws NoSuchAlgorithmException, IOException {
         Log.d(TAG, "Generating key pairs");
 
-        KeyPairGenerator keyGen = KeyPairGenerator.getInstance(ALG_NAME);
+        KeyPairGenerator keyGen = KeyPairGenerator.getInstance(PKI_ALG_NAME);
         SecureRandom random = SecureRandom.getInstance(RAND_ALG);
+
+        byte[] seed = random.generateSeed(2048);
+        random.setSeed(seed);
+
         keyGen.initialize(INIT_LEN, random);
         KeyPair pair = keyGen.generateKeyPair();
 
@@ -75,20 +82,47 @@ public class PKIManager {
         return keyPair;
     }
 
+    public static byte[] generateRandomNonce(final int length) throws NoSuchAlgorithmException {
+        SecureRandom random = SecureRandom.getInstance(RAND_ALG);
+        byte[] seed = random.generateSeed(length);
+        byte[] nonce = new byte[length];
+
+        random.setSeed(seed);
+        random.nextBytes(nonce);
+
+        return nonce;
+    }
+
+    public static byte[] signData(byte[] data, PrivateKey privKey) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+        Signature sig = Signature.getInstance(SIGN_ALG_NAME);
+        sig.initSign(privKey);
+        sig.update(data);
+
+        return sig.sign();
+    }
+
+    public static boolean verifySignature(byte[] data, byte[] sigToVerify, PublicKey pubKey) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+        Signature sig = Signature.getInstance(SIGN_ALG_NAME);
+        sig.initVerify(pubKey);
+        sig.update(data);
+
+        return sig.verify(sigToVerify);
+    }
+
 
     /******************** Internal private methods ************************************************/
 
-    private static PublicKey convertPublicKeyBytes(byte[] encKey) throws NoSuchAlgorithmException, InvalidKeySpecException {
+    public static PublicKey convertPublicKeyBytes(byte[] encKey) throws NoSuchAlgorithmException, InvalidKeySpecException {
         X509EncodedKeySpec pubKeySpec = new X509EncodedKeySpec(encKey);
-        KeyFactory keyFactory = KeyFactory.getInstance(ALG_NAME);
+        KeyFactory keyFactory = KeyFactory.getInstance(PKI_ALG_NAME);
         PublicKey pubKey = keyFactory.generatePublic(pubKeySpec);
         return pubKey;
     }
 
-    private static PrivateKey convertPrivateKeyBytes(byte[] encKey) throws NoSuchAlgorithmException, InvalidKeySpecException {
+    public static PrivateKey convertPrivateKeyBytes(byte[] encKey) throws NoSuchAlgorithmException, InvalidKeySpecException {
         //X509EncodedKeySpec pubKeySpec = new X509EncodedKeySpec(encKey);
         PKCS8EncodedKeySpec privKeySpec = new PKCS8EncodedKeySpec(encKey);
-        KeyFactory keyFactory = KeyFactory.getInstance(ALG_NAME);
+        KeyFactory keyFactory = KeyFactory.getInstance(PKI_ALG_NAME);
         PrivateKey privKey = keyFactory.generatePrivate(privKeySpec);
         return privKey;
     }

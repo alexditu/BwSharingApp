@@ -8,6 +8,8 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
 
 import research.bwsharingapp.bg.pojo.ServiceInfo;
 import research.bwsharingapp.sockcomm.CommConstants;
@@ -33,13 +35,13 @@ public class ClientAccountingService extends AccountingService {
         try {
             startCommClient(pubKeyEnc, privKeyEnc, username);
         } catch (Exception e) {
-            Log.d(TAG, "sendData exception: " + e);
+            Log.e(TAG, "Cannot start SockCommClient: " + e);
         }
     }
 
 
 
-    private void startCommClient(byte[] pubKeyEnc, byte[] privKeyEnc, String username) throws UnknownHostException {
+    private void startCommClient(byte[] pubKeyEnc, byte[] privKeyEnc, String username) throws UnknownHostException, InvalidKeySpecException, NoSuchAlgorithmException {
         InetAddress ip  = InetAddress.getByName(kb.getRouterIp());
         int port        = Integer.parseInt(kb.getRouterPort());
 

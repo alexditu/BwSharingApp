@@ -1,4 +1,4 @@
-package research.bwsharingapp.sockcomm;
+package research.bwsharingapp.sockcomm.msg;
 
 import java.io.Serializable;
 

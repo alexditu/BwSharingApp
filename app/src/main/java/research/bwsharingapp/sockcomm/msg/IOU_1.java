@@ -1,5 +1,9 @@
-package research.bwsharingapp.iou;
+package research.bwsharingapp.sockcomm.msg;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
 import research.bwsharingapp.iptables.TrafficInfo2;
@@ -13,8 +17,9 @@ import research.bwsharingapp.proto.kb.TrafficInfo;
 public class IOU_1 implements Serializable {
     TrafficInfo2 input;
     TrafficInfo2 output;
+    byte[] nonce;
 
-    public IOU_1(TrafficInfo input, TrafficInfo output) {
+    public IOU_1(TrafficInfo input, TrafficInfo output, byte[] nonce) {
         this.input = new TrafficInfo2();
         this.input.bytes = input.getBytes();
         this.input.pkts = input.getPkts();
@@ -26,6 +31,8 @@ public class IOU_1 implements Serializable {
         this.output.pkts = output.getPkts();
         this.output.src = output.getSrc();
         this.output.dst = output.getDst();
+
+        this.nonce = nonce;
     }
 
     public IOU_1() {}
@@ -49,5 +56,31 @@ public class IOU_1 implements Serializable {
 
     public void setOutput(TrafficInfo2 output) {
         this.output = output;
+    }
+
+    public byte[] getNonce() {
+        return nonce;
+    }
+
+    public void setNonce(byte[] nonce) {
+        this.nonce = nonce;
+    }
+
+    public byte[] toBytes() throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        ObjectOutput out = null;
+        try {
+            out = new ObjectOutputStream(bos);
+            out.writeObject(this);
+            out.flush();
+            byte[] bytes = bos.toByteArray();
+            return bytes;
+        } finally {
+            try {
+                bos.close();
+            } catch (IOException ex) {
+                // ignore close exception
+            }
+        }
     }
 }

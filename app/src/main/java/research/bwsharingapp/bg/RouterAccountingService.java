@@ -8,8 +8,17 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
+import java.util.concurrent.TimeUnit;
 
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
+import io.grpc.Server;
+import io.grpc.ServerBuilder;
 import research.bwsharingapp.bg.pojo.ServiceInfo;
+import research.bwsharingapp.bg.router.KibbutzRouterService;
+import research.bwsharingapp.proto.kb.KibbutzGrpc;
 import research.bwsharingapp.sockcomm.CommConstants;
 import research.bwsharingapp.sockcomm.SockCommServer;
 
@@ -22,6 +31,8 @@ public class RouterAccountingService extends AccountingService {
 
     private ServiceInfo kb;
     private SockCommServer server;
+
+    private Server server2;
 
     @Override
     protected void startAccounting(ServiceInfo kb, byte[] pubKeyEnc, byte[] privKeyEnc, String username) {
@@ -58,6 +69,9 @@ public class RouterAccountingService extends AccountingService {
         } else {
             Log.d(TAG, "Stopping SockCommServer failed!");
         }
+
+        //TODO: remove rest
+        closeConnectionToKBServer();
     }
 
 
@@ -80,4 +94,48 @@ public class RouterAccountingService extends AccountingService {
 //        }
 //
 //    }
+
+
+    private ManagedChannel mChannel = null;
+    private KibbutzGrpc.KibbutzBlockingStub stub = null;
+
+    private void startCommServer2(byte[] pubKeyEnc, byte[] privKeyEnc, String username) throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
+        InetAddress ip  = InetAddress.getByName(kb.getRouterIp());
+        int port        = Integer.parseInt(kb.getRouterPort());
+
+        connectToKBServer();
+        startKibbutzRouterServer(port, pubKeyEnc, privKeyEnc, username);
+    }
+
+    private void startKibbutzRouterServer(int port, byte[] pubKeyEnc, byte[] privKeyEnc, String username) throws InvalidKeySpecException, NoSuchAlgorithmException, IOException {
+        Log.d(TAG, "Starting KibbutzRouterService on port: " + port);
+        server2 = ServerBuilder.forPort(port)
+                .addService(new KibbutzRouterService(stub, pubKeyEnc, privKeyEnc, username))
+                .build()
+                .start();
+        Log.d(TAG, "KibbutzRouterService started successfuly");
+    }
+
+    private void connectToKBServer() {
+        Log.d(TAG, "Connecting to KibbutzServer @ " + CommConstants.KB_IP + ":" + CommConstants.KB_PORT);
+        mChannel = ManagedChannelBuilder
+                .forAddress(CommConstants.KB_IP, CommConstants.KB_PORT)
+                .usePlaintext(true)
+                .build();
+        stub = KibbutzGrpc.newBlockingStub(mChannel);
+        Log.d(TAG, "Connected successfully");
+    }
+
+    private void closeConnectionToKBServer() {
+        try {
+            if (mChannel != null) {
+                Log.d(TAG, "Closing connection to KB Server");
+                mChannel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
+            } else {
+                Log.w(TAG, "Connection to KB server not started, nothing to close");
+            }
+        } catch (InterruptedException e) {
+            Log.e(TAG, "Exception while stopping connection to KBServer: " + e);
+        }
+    }
 }

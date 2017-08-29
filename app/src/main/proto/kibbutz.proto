@@ -7,13 +7,36 @@ option objc_class_prefix = "HLW";
 
 package kibbutz;
 
-// The greeting service definition.
-service Kibbutz {
-    // Sends a greeting
-    rpc sendRouterIOU (RouterIOU) returns (RouterIOUReply) {}
-    rpc registerUser (UserData) returns (RegisterUserReply) {}
+service KibbutzRouter {
+    rpc clientConnect (ClientInfo) returns (ClientConnectReply) {}
+
+    rpc sendClientIOU (ClientIOUSigned) returns (ClientIOUReply) {}
+//    rpc registerUser (UserData) returns (RegisterUserReply) {}
+
 }
 
+service Kibbutz {
+    rpc sendRouterIOU (RouterIOUSigned) returns (RouterIOUReply) {}
+    rpc registerUser (UserData) returns (RegisterUserReply) {}
+    rpc clientConnect (ClientInfo) returns (ClientConnectReply) {}
+}
+
+// rpc clientConnect -------------------------------------------------------------------------------
+message ClientInfo {
+    string clientUsername   = 1;
+    bytes clientPubKey      = 2;
+    string routerUsername   = 3;
+}
+
+message ClientConnectReply {
+    bool clientExists   = 1;
+    int32 statusCode    = 2;
+    string statusMsg    = 3;
+    bytes nonce         = 4;
+}
+//--------------------------------------------------------------------------------------------------
+
+// rpc registerUser --------------------------------------------------------------------------------
 message UserData {
     string username = 1;
     string deviceId = 2;
@@ -24,7 +47,10 @@ message RegisterUserReply {
     bool status         = 1;
     int32 statusCode    = 2;
 }
+//--------------------------------------------------------------------------------------------------
 
+
+// rpc sendRouterIOU -------------------------------------------------------------------------------
 message TrafficInfo {
     int64 pkts      = 1;
     int64 bytes     = 2;
@@ -33,21 +59,36 @@ message TrafficInfo {
 }
 
 message ClientIOU {
-    TrafficInfo in  = 1;
-    TrafficInfo out = 2;
-    string client   = 3;
-    string server   = 4;
-    string sign     = 5;
+    TrafficInfo in          = 1;
+    TrafficInfo out         = 2;
+    string clientUsername   = 3;
+    string server           = 4;
+    bytes nonce             = 5;
 }
 
 message RouterIOU {
-    TrafficInfo in      = 1;
-    TrafficInfo out     = 2;
-    string sign         = 3;
-    ClientIOU clientIou = 4;
+    TrafficInfo in              = 1;
+    TrafficInfo out             = 2;
+    ClientIOUSigned clientIouSigned   = 3;
+    bytes nonce                 = 4;
 }
 
 message RouterIOUReply {
     bool isValid        = 1;
     int32 statusCode    = 2;
+}
+//--------------------------------------------------------------------------------------------------
+
+message ClientIOUReply {
+    int32 statusCode = 1;
+}
+
+message ClientIOUSigned {
+    ClientIOU clientIOU = 1;
+    bytes sign          = 2;
+}
+
+message RouterIOUSigned {
+    RouterIOU routerIou         = 1;
+    bytes sign                  = 2;
 }

@@ -28,12 +28,12 @@
             android:id="@+id/disconnect_btn" />
 
         <Button
-            android:text="Create Server"
+            android:text="Router Start Kibbutz Server"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:id="@+id/create_server_btn" />
         <Button
-            android:text="Client: send msg"
+            android:text="Client connect to Kibbutz"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:id="@+id/client_msg_btn" />

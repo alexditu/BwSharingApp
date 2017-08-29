@@ -2,15 +2,16 @@ package research.bwsharingapp.sockcomm;
 
 import android.util.Log;
 
+import com.google.protobuf.ByteString;
+
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.security.NoSuchAlgorithmException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -19,17 +20,27 @@ import java.util.concurrent.TimeUnit;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
-import research.bwsharingapp.iou.IOU_1;
+import research.bwsharingapp.account.PKIManager;
+import research.bwsharingapp.sockcomm.msg.ClientIOUSigned;
+import research.bwsharingapp.sockcomm.msg.IOU_1;
 import research.bwsharingapp.iptables.ExecFailedException;
 import research.bwsharingapp.iptables.IPTablesManager;
 import research.bwsharingapp.iptables.IPTablesParserException;
+import research.bwsharingapp.proto.kb.ClientConnectReply;
 import research.bwsharingapp.proto.kb.ClientIOU;
 import research.bwsharingapp.proto.kb.KibbutzGrpc;
 import research.bwsharingapp.proto.kb.RouterIOU;
 import research.bwsharingapp.proto.kb.RouterIOUReply;
 import research.bwsharingapp.proto.kb.TrafficInfo;
+import research.bwsharingapp.sockcomm.msg.ClientInfo;
+import research.bwsharingapp.sockcomm.msg.HelloReply;
+import research.bwsharingapp.sockcomm.msg.MsgType;
+import research.bwsharingapp.sockcomm.msg.SockCommMsg;
+import research.bwsharingapp.sockcomm.server.ServerMainThread;
+import research.bwsharingapp.sockcomm.server.ServerWorkerThread;
 
 import static research.bwsharingapp.MainActivity.CLIENT_ID;
+
 
 /**
  * Created by alex on 4/30/17.
@@ -44,7 +55,7 @@ public class SockCommServer {
     private ServerSocket serverSocket;
 
     private ServerMainThread serverMainThread;
-    private List<ServerWorkerThread> workerThreadPool;
+    private static List<ServerWorkerThread> workerThreadPool = new ArrayList<>(MAX_CLIENT_CONN);
 
     private byte[] pubKeyEnc;
     private byte[] privKeyEnc;
@@ -58,14 +69,13 @@ public class SockCommServer {
         this.pubKeyEnc          = Arrays.copyOf(pubKeyEnc, pubKeyEnc.length);
         this.privKeyEnc         = Arrays.copyOf(privKeyEnc, privKeyEnc.length);
         this.username           = username;
-        workerThreadPool        = new ArrayList<>(MAX_CLIENT_CONN);
     }
 
-    public synchronized void addWorker(ServerWorkerThread worker) {
+    public static synchronized void addWorker(ServerWorkerThread worker) {
         workerThreadPool.add(worker);
     }
 
-    public synchronized void removeWorker(ServerWorkerThread worker) {
+    public static synchronized void removeWorker(ServerWorkerThread worker) {
         workerThreadPool.remove(worker);
     }
 
@@ -93,7 +103,7 @@ public class SockCommServer {
             return false;
         }
 
-        serverMainThread = new ServerMainThread(pubKeyEnc, privKeyEnc, username);
+        serverMainThread = new ServerMainThread(serverSocket, pubKeyEnc, privKeyEnc, username);
         serverMainThread.start();
 
         return true;
@@ -138,196 +148,7 @@ public class SockCommServer {
         return ipAddr.getHostAddress() + ":" + port;
     }
 
-class ServerWorkerThread extends Thread {
-    private final String TAG = "SockCommServer_worker-" + Thread.currentThread().getId();
-    private Socket clientSocket;
-
-    private ManagedChannel mChannel;
-    private KibbutzGrpc.KibbutzBlockingStub stub;
-
-    private byte[] pubKeyEnc;
-    private byte[] privKeyEnc;
-    private String username;
-
-    public ServerWorkerThread(Socket clientSocket, byte[] pubKeyEnc, byte[] privKeyEnc, String username) {
-        this.clientSocket = clientSocket;
-        this.pubKeyEnc  = Arrays.copyOf(pubKeyEnc, pubKeyEnc.length);
-        this.privKeyEnc = Arrays.copyOf(privKeyEnc, privKeyEnc.length);
-        this.username   = username;
-    }
-
-    private void connectToKBServer() {
-        mChannel = ManagedChannelBuilder
-                .forAddress(CommConstants.KB_IP, CommConstants.KB_PORT)
-                .usePlaintext(true)
-                .build();
-        stub = KibbutzGrpc.newBlockingStub(mChannel);
-    }
-
-    private void closeConnectionToKBServer() {
-        try {
-            if (mChannel != null) {
-                Log.d(TAG, "Closing connection to KB Server");
-                mChannel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
-            } else {
-                Log.w(TAG, "Connection to KB server not started, nothing to close");
-            }
-        } catch (InterruptedException e) {
-            Log.e(TAG, "Exception while stopping connection to KBServer: " + e);
-        }
-    }
-
-    void sendRouterIou(ClientIOU clientIou, TrafficInfo fw[]) {
-        try {
-            RouterIOU.Builder routerIouBuilder = RouterIOU.newBuilder();
-            routerIouBuilder.setClientIou(clientIou);
-            routerIouBuilder.setIn(fw[0]);
-            routerIouBuilder.setOut(fw[1]);
-
-            RouterIOU routerIou = routerIouBuilder.build();
-            RouterIOUReply reply = stub.sendRouterIOU(routerIou);
-            Log.d(TAG, "recv message: " + reply);
-        } catch (Exception e) {
-            Log.e(TAG, "Exception while sending routerIOU: " + e);
-        }
-    }
-
-    private String fmt(String value) {
-        DecimalFormat myFormatter = new DecimalFormat("###,###.###");
-        String output = myFormatter.format(Double.parseDouble(value));
-        return output;
-    }
-
-    // TODO: should be replaced when communication between client and router is done via grpc
-    private ClientIOU convert(IOU_1 iou) {
-        ClientIOU.Builder builder = ClientIOU.newBuilder();
-
-        TrafficInfo.Builder bIn = TrafficInfo.newBuilder();
-        bIn.setBytes(iou.getInput().getBytes());
-        bIn.setPkts(iou.getInput().getPkts());
-        bIn.setSrc(iou.getInput().getSrc());
-        bIn.setDst(iou.getInput().getDst());
-
-        TrafficInfo.Builder bOut = TrafficInfo.newBuilder();
-        bOut.setBytes(iou.getOutput().getBytes());
-        bOut.setPkts(iou.getOutput().getPkts());
-        bOut.setSrc(iou.getOutput().getSrc());
-        bOut.setDst(iou.getOutput().getDst());
-
-        builder.setIn(bIn.build());
-        builder.setOut(bOut.build());
-        return builder.build();
-    }
-
-    @Override
-    public void run() {
-        ObjectInputStream input = null;
-        ObjectOutputStream output = null;
-        try {
-
-            connectToKBServer();
-
-            while (true) {
-                Log.d(TAG, "Reading message");
-                input = new ObjectInputStream(clientSocket.getInputStream());
-                Object ob = input.readObject();
-
-
-                SockCommMsg<Object> genericMsg = (SockCommMsg<Object>) ob;
-                Log.d(TAG, "Recv msg type: " + genericMsg.getType());
-                if (genericMsg.getType() == MsgType.HELLO) {
-                    processHelloMsg((SockCommMsg<ClientInfo>) ob);
-                } else if (genericMsg.getType() == MsgType.IOU_1) {
-                    processClientIOU((SockCommMsg<IOU_1>) ob);
-                } else {
-                    Log.d(TAG, "Unknown message type: " + genericMsg.getType());
-                }
 
 
 
-            }
-
-
-//            Log.d(TAG, "Sending reply");
-//            output = new ObjectOutputStream(clientSocket.getOutputStream());
-//            if (request.getType() == MsgType.HELLO) {
-//                SockCommMsg<String> reply = new SockCommMsg<String>(MsgType.HELLO, "Ok");
-//                output.writeObject(reply);
-//             } else {
-//                SockCommMsg<String> reply = new SockCommMsg<String>(MsgType.ERROR, "Error: invalid type for first msg");
-//                output.writeObject(reply);
-//                output.flush();
-//            }
-//
-//            input.close();
-//            output.close();
-        } catch (Exception e) {
-            Log.d(TAG, "Exception in server worker thread: " + e);
-            closeConnectionToKBServer();
-        }
-
-        removeWorker(this);
-    }
-
-    private void processHelloMsg(SockCommMsg<ClientInfo> request) throws IOException {
-        Log.d(TAG, "Recv HELLO from client: " + request.getData().getUsername());
-
-        Log.d(TAG, "Sending reply");
-        ObjectOutputStream output = new ObjectOutputStream(clientSocket.getOutputStream());
-        SockCommMsg<Integer> reply = new SockCommMsg<>(MsgType.HELLO_REPLY, 0);
-        output.writeObject(reply);
-        output.flush();
-    }
-
-    private void processClientIOU(SockCommMsg<IOU_1> request) throws ExecFailedException, IOException, IPTablesParserException {
-
-        TrafficInfo fw[] = IPTablesManager.getFwStats(CLIENT_ID);
-        Log.d(TAG, "client stats bytes: " +
-                fmt(request.getData().getInput().getBytes() + "") + "\t\t" +
-                fmt(request.getData().getOutput().getBytes() + ""));
-        Log.d(TAG, "router stats bytes: " +
-                fmt(fw[0].getBytes() + "") + "\t\t" +
-                fmt(fw[1].getBytes() + ""));
-
-
-        ClientIOU clientIou = convert(request.getData());
-        sendRouterIou(clientIou, fw);
-    }
-}
-
-    class ServerMainThread extends Thread {
-        private final String TAG = "SockCommServer_main";
-
-        private byte[] pubKeyEnc;
-        private byte[] privKeyEnc;
-        private String username;
-
-        public ServerMainThread(byte[] pubKeyEnc, byte[] privKeyEnc, String username) {
-            this.pubKeyEnc  = Arrays.copyOf(pubKeyEnc, pubKeyEnc.length);
-            this.privKeyEnc = Arrays.copyOf(privKeyEnc, privKeyEnc.length);
-            this.username   = username;
-        }
-
-        @Override
-        public void run() {
-            try {
-                while(true) {
-                    Log.d(TAG, "Waiting for clients...");
-                    Socket clientSock = null;
-
-                    clientSock = serverSocket.accept();
-                    Log.d(TAG, "Client connected: " + clientSock.getInetAddress().getHostAddress());
-
-                    ServerWorkerThread th =
-                            new ServerWorkerThread(clientSock, pubKeyEnc, privKeyEnc, username);
-                    th.start();
-                    addWorker(th);
-                }
-            } catch (SocketException e) {
-                Log.d(TAG, "Server stopped: signaled to stop: " + e);
-            } catch (IOException e) {
-                Log.e(TAG, "Server stopped: Exception while accepting socket: " + e);
-            }
-        }
-    }
 }
