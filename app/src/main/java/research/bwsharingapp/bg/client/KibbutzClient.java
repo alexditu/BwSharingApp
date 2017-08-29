@@ -45,7 +45,7 @@ public class KibbutzClient {
 
     //TODO: send values via constructor
     public final static String KIBBUTZ_ROUTER_IP = "192.168.56.101";
-    public final static int KIBBUTZ_ROUTER_PORT = 50051;
+    public final static int KIBBUTZ_ROUTER_PORT = 8080;
 
     private int port;
     private InetAddress ipAddr;

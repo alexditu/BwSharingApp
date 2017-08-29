@@ -11,6 +11,7 @@ import java.net.UnknownHostException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 
+import research.bwsharingapp.bg.client.KibbutzClient;
 import research.bwsharingapp.bg.pojo.ServiceInfo;
 import research.bwsharingapp.sockcomm.CommConstants;
 import research.bwsharingapp.sockcomm.SockCommClient;
@@ -26,6 +27,7 @@ public class ClientAccountingService extends AccountingService {
 
     private ServiceInfo kb;
     private SockCommClient client;
+//    private KibbutzClient client;
 
     @Override
     protected void startAccounting(ServiceInfo kb, byte[] pubKeyEnc, byte[] privKeyEnc, String username) {
@@ -45,6 +47,7 @@ public class ClientAccountingService extends AccountingService {
         InetAddress ip  = InetAddress.getByName(kb.getRouterIp());
         int port        = Integer.parseInt(kb.getRouterPort());
 
+        //client = new KibbutzClient(ip, port, pubKeyEnc, privKeyEnc, username);
         client = new SockCommClient(ip, port, pubKeyEnc, privKeyEnc, username);
         boolean connected = client.connect();
 
@@ -62,28 +65,4 @@ public class ClientAccountingService extends AccountingService {
         Log.d(TAG, "Stopping sockCommClient: " + client);
         client.disconnect();
     }
-
-
-//    private void sendData() throws IOException, InterruptedException {
-//        byte buf[] = new byte[1024];
-//        byte data[] = new String("ana").getBytes();
-//
-//        System.arraycopy(data, 0, buf, 0, 3);
-//
-//        int port = Integer.parseInt(kb.getRouterPort());
-//        InetAddress serverAddr = InetAddress.getByName(kb.getRouterIp());
-//        DatagramSocket s = new DatagramSocket();
-//
-//        DatagramPacket p = new DatagramPacket(buf, 1024, serverAddr, port);
-//
-//        int count = 0;
-//        while (count < 10 && !stopService) {
-//            Log.d(TAG, "Sending packet: " + count);
-//            s.send(p);
-//            Log.d(TAG, "Done Sending packet: " + count);
-//            count++;
-//            Thread.sleep(1000);
-//        }
-//
-//    }
 }

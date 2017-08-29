@@ -32,6 +32,9 @@ public class RouterAccountingService extends AccountingService {
     private ServiceInfo kb;
     private SockCommServer server;
 
+    private ManagedChannel mChannel = null;
+    private KibbutzGrpc.KibbutzBlockingStub stub = null;
+
     private Server server2;
 
     @Override
@@ -96,8 +99,7 @@ public class RouterAccountingService extends AccountingService {
 //    }
 
 
-    private ManagedChannel mChannel = null;
-    private KibbutzGrpc.KibbutzBlockingStub stub = null;
+
 
     private void startCommServer2(byte[] pubKeyEnc, byte[] privKeyEnc, String username) throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
         InetAddress ip  = InetAddress.getByName(kb.getRouterIp());
