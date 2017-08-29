@@ -37,6 +37,8 @@ import research.bwsharingapp.proto.kb.TrafficInfo;
 
 import static research.bwsharingapp.MainActivity.CLIENT_ID;
 import static research.bwsharingapp.bg.router.KibbutzRouterService.SESSION_NONCE_LENGTH;
+import static research.bwsharingapp.bg.router.Utils.fmt;
+import static research.bwsharingapp.bg.router.Utils.toBytes;
 
 /**
  * Created by alex on 8/29/17.
@@ -261,29 +263,7 @@ public class KibbutzRouterService extends KibbutzRouterGrpc.KibbutzRouterImplBas
 
     //----------------------------------------------------------------------------------------------
 
-    private byte[] toBytes(Object obj) throws IOException {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ObjectOutput out = null;
-        try {
-            out = new ObjectOutputStream(bos);
-            out.writeObject(obj);
-            out.flush();
-            byte[] bytes = bos.toByteArray();
-            return bytes;
-        } finally {
-            try {
-                bos.close();
-            } catch (IOException ex) {
-                // ignore close exception
-            }
-        }
-    }
 
-    private String fmt(String value) {
-        DecimalFormat myFormatter = new DecimalFormat("###,###.###");
-        String output = myFormatter.format(Double.parseDouble(value));
-        return output;
-    }
 
 
 }
